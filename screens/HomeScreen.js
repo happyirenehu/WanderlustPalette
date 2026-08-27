@@ -20,6 +20,12 @@ const ACTIVE_THEME_KEY = '@wanderlust_palette/active_theme';
 const DEFAULT_THEME = mockData[0]?.palette[0] || '#F7FAFC';
 const EMPTY_FORM = { destination: '', country: '', date: '', notes: '' };
 
+function getDisplayImageUri(imageUri) {
+  if (!imageUri.startsWith('https://images.unsplash.com/')) return imageUri;
+  const separator = imageUri.includes('?') ? '&' : '?';
+  return `${imageUri}${separator}fit=max&w=1200&q=80`;
+}
+
 export default function HomeScreen() {
   const sampleJourneys = useMemo(() => normalizeJourneys(mockData), []);
   const [journeys, setJourneys] = useState(sampleJourneys);
@@ -199,7 +205,7 @@ export default function HomeScreen() {
           onPress={() => openDetail(journey)}
           style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
         >
-          {journey.imageUri ? <Image source={{ uri: journey.imageUri }} style={styles.image} /> : null}
+          {journey.imageUri ? <Image source={{ uri: getDisplayImageUri(journey.imageUri) }} style={styles.image} /> : null}
           <View style={styles.cardBody}>
             <Text style={styles.cardDate}>{journey.date}</Text>
             <Text style={styles.location}>{journey.destination}</Text>
@@ -231,7 +237,7 @@ export default function HomeScreen() {
           <Text style={styles.backButtonText}>← My Journeys</Text>
         </Pressable>
         <View style={styles.detailCard}>
-          {selectedJourney.imageUri ? <Image source={{ uri: selectedJourney.imageUri }} style={styles.detailImage} /> : null}
+          {selectedJourney.imageUri ? <Image source={{ uri: getDisplayImageUri(selectedJourney.imageUri) }} style={styles.detailImage} /> : null}
           <Text style={styles.cardDate}>{selectedJourney.date}</Text>
           <Text style={styles.detailTitle}>{selectedJourney.destination}</Text>
           <Text style={styles.detailCountry}>{selectedJourney.country}</Text>
