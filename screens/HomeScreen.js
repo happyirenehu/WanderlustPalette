@@ -80,6 +80,7 @@ export default function HomeScreen() {
   };
 
   const openDetail = (journey) => {
+    selectTheme(journey.palette[0]);
     setSelectedId(journey.id);
     setScreen('detail');
   };
@@ -159,7 +160,10 @@ export default function HomeScreen() {
           <Pressable
             accessibilityLabel={`Set theme to ${color}`}
             key={color}
-            onPress={() => selectTheme(color)}
+            onPress={(event) => {
+              event.stopPropagation();
+              selectTheme(color);
+            }}
             style={[styles.swatch, { backgroundColor: color }]}
           />
         ))}
