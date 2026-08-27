@@ -1,0 +1,32 @@
+[
+  {
+    "id": "kyoto-japan",
+    "location": "Kyoto, Japan",
+    "date": "2025-04-12",
+    "description": "A spring journey through quiet temple gardens, lantern-lit lanes, and blooming cherry trees.",
+    "imageUri": "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e",
+    "palette": ["#D9B08C", "#B85C5C", "#5B7553", "#F2E8CF", "#3C405B"],
+    "totalCost": 2480,
+    "expenses": [
+      { "category": "Accommodation", "amount": 980 },
+      { "category": "Transportation", "amount": 420 },
+      { "category": "Food", "amount": 560 },
+      { "category": "Activities", "amount": 520 }
+    ]
+  },
+  {
+    "id": "lofoten-norway",
+    "location": "Lofoten, Norway",
+    "date": "2024-09-03",
+    "description": "A coastal escape among sharp peaks, red fishing cabins, and long northern light evenings.",
+    "imageUri": "https://images.unsplash.com/photo-1520769945061-0a448c463865",
+    "palette": ["#1F3A5F", "#6B8E9E", "#C96B4B", "#E8DCC4", "#263238"],
+    "totalCost": 3125,
+    "expenses": [
+      { "category": "Accommodation", "amount": 1250 },
+      { "category": "Transportation", "amount": 760 },
+      { "category": "Food", "amount": 615 },
+      { "category": "Activities", "amount": 500 }
+    ]
+  }
+]
