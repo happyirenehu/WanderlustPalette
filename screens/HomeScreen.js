@@ -12,7 +12,10 @@ import {
 } from 'react-native';
 
 import mockData from '../assets/mockData.json';
+import SignatureScreen from './SignatureScreen.js';
 import getContrastColor from '../utils/accessibility.js';
+import { addFavouriteId, isFavouriteId, removeFavouriteId } from '../utils/dreamPalette.js';
+import { loadFavouriteIds, saveFavouriteIds } from '../utils/dreamPaletteStorage.js';
 import { addJourney, deleteJourney, normalizeJourneys, updateJourney } from '../utils/journeys.js';
 import { loadJourneys, saveJourneys } from '../utils/journeyStorage.js';
 
@@ -36,19 +39,25 @@ export default function HomeScreen() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
   const [storageError, setStorageError] = useState('');
+  const [section, setSection] = useState('discover');
+  const [favouriteIds, setFavouriteIds] = useState([]);
+  const [dreamStorageError, setDreamStorageError] = useState('');
 
   useEffect(() => {
     let isMounted = true;
 
     const loadAppState = async () => {
-      const [journeyResult, savedThemeResult] = await Promise.all([
+      const [journeyResult, savedThemeResult, favouriteResult] = await Promise.all([
         loadJourneys(sampleJourneys),
         AsyncStorage.getItem(ACTIVE_THEME_KEY).catch(() => null),
+        loadFavouriteIds(),
       ]);
 
       if (!isMounted) return;
       setJourneys(journeyResult.journeys);
       setStorageError(journeyResult.error || '');
+      setFavouriteIds(favouriteResult.ids);
+      setDreamStorageError(favouriteResult.error || '');
       if (savedThemeResult) setActiveTheme(savedThemeResult);
     };
 
@@ -76,6 +85,15 @@ export default function HomeScreen() {
     setJourneys(nextJourneys);
     const result = await saveJourneys(nextJourneys);
     setStorageError(result.error || '');
+  };
+
+  const toggleFavourite = async (destinationId) => {
+    const nextIds = isFavouriteId(favouriteIds, destinationId)
+      ? removeFavouriteId(favouriteIds, destinationId)
+      : addFavouriteId(favouriteIds, destinationId);
+    setFavouriteIds(nextIds);
+    const result = await saveFavouriteIds(nextIds);
+    setDreamStorageError(result.error || '');
   };
 
   const openList = () => {
@@ -297,7 +315,28 @@ export default function HomeScreen() {
       keyboardShouldPersistTaps="handled"
       style={[styles.screen, { backgroundColor: activeTheme }]}
     >
-      {storageError ? (
+      <View accessibilityLabel="Main sections" accessibilityRole="tablist" style={styles.sectionNav}>
+        {[
+          ['discover', 'Discover'],
+          ['dream', 'Dream Palette'],
+          ['journeys', 'My Journeys'],
+        ].map(([id, label]) => {
+          const selected = section === id;
+          return (
+            <Pressable
+              accessibilityLabel={`${label}${selected ? ', selected' : ''}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
+              key={id}
+              onPress={() => setSection(id)}
+              style={[styles.sectionTab, selected && styles.sectionTabSelected]}
+            >
+              <Text style={[styles.sectionTabText, selected && styles.sectionTabTextSelected]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {section === 'journeys' && storageError ? (
         <View accessibilityRole="alert" style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{storageError}</Text>
           <Pressable onPress={() => setStorageError('')}>
@@ -305,9 +344,25 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       ) : null}
-      {screen === 'list' ? renderList() : null}
-      {screen === 'detail' ? renderDetail() : null}
-      {screen === 'form' ? renderForm() : null}
+      {section !== 'journeys' && dreamStorageError ? (
+        <View accessibilityRole="alert" style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{dreamStorageError}</Text>
+          <Pressable onPress={() => setDreamStorageError('')}>
+            <Text style={styles.dismissText}>Dismiss</Text>
+          </Pressable>
+        </View>
+      ) : null}
+      {section === 'discover' || section === 'dream' ? (
+        <SignatureScreen
+          favouriteIds={favouriteIds}
+          mode={section}
+          onSelectTheme={selectTheme}
+          onToggleFavourite={toggleFavourite}
+        />
+      ) : null}
+      {section === 'journeys' && screen === 'list' ? renderList() : null}
+      {section === 'journeys' && screen === 'detail' ? renderDetail() : null}
+      {section === 'journeys' && screen === 'form' ? renderForm() : null}
     </ScrollView>
   );
 }
@@ -315,6 +370,11 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { flexGrow: 1, padding: 24 },
+  sectionNav: { backgroundColor: '#FFFFFF', borderRadius: 9, flexDirection: 'row', gap: 4, marginBottom: 22, padding: 4 },
+  sectionTab: { alignItems: 'center', borderRadius: 7, flex: 1, justifyContent: 'center', minHeight: 42, paddingHorizontal: 6, paddingVertical: 9 },
+  sectionTabSelected: { backgroundColor: '#17202A' },
+  sectionTabText: { color: '#667085', fontSize: 12, fontWeight: '800', textAlign: 'center' },
+  sectionTabTextSelected: { color: '#FFFFFF' },
   headerRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 16, justifyContent: 'space-between', marginBottom: 28, paddingTop: 16 },
   headerCopy: { flex: 1 },
   kicker: { fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: 12, opacity: 0.72 },

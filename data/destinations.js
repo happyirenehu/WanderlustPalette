@@ -1,0 +1,88 @@
+const destinations = [
+  {
+    id: 'santorini-greece', name: 'Santorini', country: 'Greece',
+    vibeIds: ['calm', 'romantic'], colorFamily: 'Aegean blue and chalk white',
+    palette: ['#245B78', '#6FA7BF', '#F5F1E8', '#D7B7A3'],
+    description: 'Clifftop villages gather above a blue caldera in a composition of white stone, sea, and evening light.',
+    whyItMatches: 'Its open horizon and restrained blue-white palette create a calm, intimate rhythm.',
+  },
+  {
+    id: 'milos-greece', name: 'Milos', country: 'Greece',
+    vibeIds: ['calm', 'dreamy'], colorFamily: 'Mineral blue pastels',
+    palette: ['#4C8298', '#9EC4CF', '#E2D9C7', '#F7F0E6'],
+    description: 'Sculpted coves and pale volcanic rock turn the shoreline into a quiet study in sea-washed colour.',
+    whyItMatches: 'Soft mineral tones and sheltered water suit a slower, dreamlike escape.',
+  },
+  {
+    id: 'provence-france', name: 'Provence', country: 'France',
+    vibeIds: ['dreamy', 'romantic'], colorFamily: 'Lavender and limestone',
+    palette: ['#77658B', '#A996C0', '#D8C8DF', '#E9D9B5'],
+    description: 'Lavender fields, weathered shutters, and pale villages unfold beneath spacious summer skies.',
+    whyItMatches: 'Layered lavender and warm stone make the landscape feel soft, nostalgic, and composed.',
+  },
+  {
+    id: 'lake-bled-slovenia', name: 'Lake Bled', country: 'Slovenia',
+    vibeIds: ['dreamy', 'calm'], colorFamily: 'Mist blue and woodland green',
+    palette: ['#416B70', '#7EA3A1', '#B9C8B2', '#E6E0D0'],
+    description: 'A small island and mountain lake create a storybook scene framed by forest and changing mist.',
+    whyItMatches: 'Reflective water and softened greens give the place a gentle, suspended quality.',
+  },
+  {
+    id: 'marrakech-morocco', name: 'Marrakech', country: 'Morocco',
+    vibeIds: ['warm', 'energetic'], colorFamily: 'Ochre and saffron',
+    palette: ['#9D4428', '#D46C3A', '#E5A64B', '#F2D19A'],
+    description: 'Courtyards, market lanes, and terracotta walls build a vivid cityscape of texture and movement.',
+    whyItMatches: 'Saturated earth colours and bustling public spaces carry warmth and creative energy.',
+  },
+  {
+    id: 'seville-spain', name: 'Seville', country: 'Spain',
+    vibeIds: ['warm', 'romantic'], colorFamily: 'Citrus and tiled terracotta',
+    palette: ['#A53F27', '#D97845', '#F0B65A', '#F6E0B8'],
+    description: 'Orange trees, patterned courtyards, and late golden light give the city a generous visual warmth.',
+    whyItMatches: 'Sunlit colour and intimate tiled spaces balance warmth with a romantic sense of occasion.',
+  },
+  {
+    id: 'tuscany-italy', name: 'Tuscany', country: 'Italy',
+    vibeIds: ['warm', 'romantic'], colorFamily: 'Amber earth and olive',
+    palette: ['#87552E', '#B9834B', '#9A9360', '#E8D6AD'],
+    description: 'Hill towns, olive groves, and long agricultural lines shape a landscape made for lingering.',
+    whyItMatches: 'Amber soil and muted green offer an inviting, grounded kind of romance.',
+  },
+  {
+    id: 'madeira-portugal', name: 'Madeira', country: 'Portugal',
+    vibeIds: ['wild', 'energetic'], colorFamily: 'Laurel green and volcanic blue',
+    palette: ['#1F4D3B', '#48765B', '#2E7182', '#A4B889'],
+    description: 'Steep trails, laurel forest, and ocean cliffs compress dramatic nature into a compact island.',
+    whyItMatches: 'Dense greens and sharp coastal contrasts reward movement and a taste for elemental terrain.',
+  },
+  {
+    id: 'azores-portugal', name: 'The Azores', country: 'Portugal',
+    vibeIds: ['wild', 'calm'], colorFamily: 'Crater green and Atlantic blue',
+    palette: ['#244D43', '#557D69', '#397286', '#B4C8B7'],
+    description: 'Crater lakes, hydrangea lanes, and Atlantic weather create an island world that feels self-contained.',
+    whyItMatches: 'The landscape pairs wild volcanic form with quiet water and expansive green.',
+  },
+  {
+    id: 'lofoten-norway', name: 'Lofoten', country: 'Norway',
+    vibeIds: ['wild', 'dreamy'], colorFamily: 'Arctic blue and cabin red',
+    palette: ['#1F3A5F', '#6B8E9E', '#C96B4B', '#E8DCC4'],
+    description: 'Mountain walls rise directly from fishing villages and narrow northern seas.',
+    whyItMatches: 'Dramatic natural scale meets quiet, colour-rich settlements at the edge of the Arctic.',
+  },
+  {
+    id: 'kyoto-japan', name: 'Kyoto', country: 'Japan',
+    vibeIds: ['romantic', 'calm'], colorFamily: 'Maple red and moss green',
+    palette: ['#8E4B46', '#B98272', '#56705A', '#E6D9C8'],
+    description: 'Temple gardens, lantern-lit lanes, and seasonal colour reward attentive, unhurried exploration.',
+    whyItMatches: 'Layered craft, garden calm, and changing colour create an intimate sense of place.',
+  },
+  {
+    id: 'queenstown-new-zealand', name: 'Queenstown', country: 'New Zealand',
+    vibeIds: ['energetic', 'wild'], colorFamily: 'Alpine blue and golden grass',
+    palette: ['#24536B', '#4E879A', '#B29B55', '#E2D6A4'],
+    description: 'An alpine lake and sharp mountain ranges form a base for days built around movement outdoors.',
+    whyItMatches: 'High-contrast landscapes and active terrain translate vivid colour into momentum.',
+  },
+];
+
+export default destinations;
