@@ -3,12 +3,13 @@ import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import DestinationImage from '../components/DestinationImage.js';
 import VibeCard from '../components/VibeCard.js';
+import { useLanguage } from '../context/LanguageContext.js';
 import colorsData from '../data/colors.js';
 import destinationsData from '../data/destinations.js';
 import vibesData from '../data/vibes.js';
 import { fetchCountryFacts } from '../utils/countryApi.js';
 import { loadCountryFacts, saveCountryFacts } from '../utils/countryInfoStorage.js';
-import { applyBudgetPreference, BUDGET_LEVELS, getBudgetDisplay } from '../utils/budget.js';
+import { applyBudgetPreference, BUDGET_LEVELS } from '../utils/budget.js';
 import { getRelatedDestinations, getVibeById, normalizeDestinations, normalizeVibes, recommendDestinations, recommendDestinationsByColor, resolveDestinationIds } from '../utils/discovery.js';
 import getDreamPaletteInsights from '../utils/destinationInsights.js';
 import { isFavouriteId } from '../utils/dreamPalette.js';
@@ -16,8 +17,30 @@ import { isFavouriteId } from '../utils/dreamPalette.js';
 const FALLBACK_COLOR = '#E8EEF2';
 
 export default function SignatureScreen({ mode, favouriteIds, onDestinationChange, onRecommendationReady, onSelectTheme, onToggleFavourite }) {
-  const vibes = useMemo(() => normalizeVibes(vibesData), []);
-  const destinations = useMemo(() => normalizeDestinations(destinationsData), []);
+  const { formatCapital, formatCountry, formatDestination, formatIncome, formatRegion, locale, t } = useLanguage();
+  const vibes = useMemo(() => normalizeVibes(vibesData).map((vibe) => ({
+    ...vibe,
+    colorFamily: t(`vibes.${vibe.id}.colorFamily`, {}, vibe.colorFamily),
+    description: t(`vibes.${vibe.id}.description`, {}, vibe.description),
+    imageAlt: t(`vibes.${vibe.id}.imageAlt`, {}, vibe.imageAlt),
+    name: t(`vibes.${vibe.id}.name`, {}, vibe.name),
+  })), [locale]);
+  const colors = useMemo(() => colorsData.map((color) => ({
+    ...color,
+    description: t(`colors.${color.id}.description`, {}, color.description),
+    name: t(`colors.${color.id}.name`, {}, color.name),
+  })), [locale]);
+  const destinations = useMemo(() => normalizeDestinations(destinationsData).map((destination) => ({
+    ...destination,
+    colorFamily: t(`destinations.${destination.id}.colorFamily`, {}, destination.colorFamily),
+    country: formatCountry(destination.countryCode, destination.country),
+    description: t(`destinations.${destination.id}.description`, {}, destination.description),
+    imageAlt: t(`destinations.${destination.id}.imageAlt`, {}, destination.imageAlt),
+    imageCredit: destination.imageCredit ? t('images.credit') : '',
+    name: formatDestination(destination.id, destination.name),
+    travelRegion: formatRegion(destination.travelRegion),
+    whyItMatches: t(`destinations.${destination.id}.whyItMatches`, {}, destination.whyItMatches),
+  })), [locale]);
   const [discoveryMode, setDiscoveryMode] = useState('vibe');
   const [selectedVibeId, setSelectedVibeId] = useState(null);
   const [selectedColorId, setSelectedColorId] = useState(null);
@@ -27,14 +50,19 @@ export default function SignatureScreen({ mode, favouriteIds, onDestinationChang
   const resultsY = useRef(null);
   const pendingResultsScroll = useRef(false);
   const selectedVibe = getVibeById(selectedVibeId, vibes);
-  const selectedColor = colorsData.find((item) => item.id === selectedColorId) || null;
+  const selectedColor = colors.find((item) => item.id === selectedColorId) || null;
   const selectedDestination = destinations.find((item) => item.id === selectedDestinationId) || null;
   const dreamDestinations = resolveDestinationIds(favouriteIds, destinations);
-  const insights = getDreamPaletteInsights(favouriteIds, destinations, vibes, colorsData);
+  const insights = getDreamPaletteInsights(favouriteIds, destinations, vibes, colors);
   const baseRecommendations = discoveryMode === 'color'
-    ? recommendDestinationsByColor(selectedColorId, destinations, colorsData)
+    ? recommendDestinationsByColor(selectedColorId, destinations, colors)
     : recommendDestinations(selectedVibeId, destinations, vibes);
   const recommendations = applyBudgetPreference(baseRecommendations, budgetPreference);
+  const budgetLabel = (id) => t(`budget.${id}`, {}, id);
+  const budgetDisplay = (id) => {
+    const level = BUDGET_LEVELS.find((item) => item.id === id);
+    return level ? `${level.symbol} · ${budgetLabel(id)}` : '';
+  };
 
   useEffect(() => setSelectedDestinationId(null), [mode]);
 
@@ -71,9 +99,9 @@ export default function SignatureScreen({ mode, favouriteIds, onDestinationChang
   }, [selectedDestination?.countryCode]);
 
   const renderPalette = (palette, label) => (
-    <View accessibilityLabel={`${label} colour palette`} style={styles.paletteRow}>
+    <View accessibilityLabel={t('discovery.paletteLabel', { name: label })} style={styles.paletteRow}>
       {(palette.length ? palette : [FALLBACK_COLOR]).map((color) => (
-        <Pressable accessibilityLabel={`Use ${color} as app theme`} accessibilityRole="button" key={color} onPress={(event) => { event.stopPropagation(); onSelectTheme(color); }} style={[styles.swatch, { backgroundColor: color }]} />
+        <Pressable accessibilityLabel={t('discovery.useTheme', { color })} accessibilityRole="button" key={color} onPress={(event) => { event.stopPropagation(); onSelectTheme(color); }} style={[styles.swatch, { backgroundColor: color }]} />
       ))}
     </View>
   );
@@ -94,12 +122,12 @@ export default function SignatureScreen({ mode, favouriteIds, onDestinationChang
   const renderDestinationCard = (destination, compact = false) => {
     const saved = isFavouriteId(favouriteIds, destination.id);
     return (
-      <Pressable accessibilityHint="Opens curated destination details" accessibilityLabel={`${destination.name}, ${destination.country}${saved ? ', saved to Dream Palette' : ''}`} accessibilityRole="button" key={destination.id} onPress={() => setSelectedDestinationId(destination.id)} style={({ pressed }) => [styles.destinationCard, compact && styles.compactCard, pressed && styles.pressedCard]}>
+      <Pressable accessibilityHint={t('discovery.destinationHint')} accessibilityLabel={`${destination.name}, ${destination.country}${saved ? `, ${t('discovery.savedToDream')}` : ''}`} accessibilityRole="button" key={destination.id} onPress={() => setSelectedDestinationId(destination.id)} style={({ pressed }) => [styles.destinationCard, compact && styles.compactCard, pressed && styles.pressedCard]}>
         <DestinationImage destination={destination} />
         <View style={styles.destinationBody}>
           <View style={styles.destinationHeading}>
-            <View style={styles.destinationCopy}><Text style={styles.eyebrow}>{destination.colorFamily || 'Curated colour story'}</Text><Text style={[styles.destinationName, compact && styles.compactName]}>{destination.name}</Text><Text style={styles.destinationCountry}>{destination.country}</Text></View>
-            {saved ? <Text style={styles.savedBadge}>SAVED</Text> : null}
+            <View style={styles.destinationCopy}><Text style={styles.eyebrow}>{destination.colorFamily || t('discovery.curatedColorStory')}</Text><Text style={[styles.destinationName, compact && styles.compactName]}>{destination.name}</Text><Text style={styles.destinationCountry}>{destination.country}</Text></View>
+            {saved ? <Text style={styles.savedBadge}>{t('common.saved')}</Text> : null}
           </View>
           {!compact ? <><Text style={styles.destinationDescription}>{destination.description}</Text>{renderPalette(destination.palette, destination.name)}</> : null}
         </View>
@@ -108,73 +136,83 @@ export default function SignatureScreen({ mode, favouriteIds, onDestinationChang
   };
 
   if (selectedDestinationId) {
-    if (!selectedDestination) return <View style={styles.emptyCard}><Text style={styles.emptyTitle}>Destination unavailable</Text><Pressable onPress={() => setSelectedDestinationId(null)} style={styles.darkButton}><Text style={styles.darkButtonText}>Back</Text></Pressable></View>;
+    if (!selectedDestination) return <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t('discovery.destinationUnavailable')}</Text><Pressable onPress={() => setSelectedDestinationId(null)} style={styles.darkButton}><Text style={styles.darkButtonText}>{t('common.back')}</Text></Pressable></View>;
     const destinationVibes = selectedDestination.vibeIds.map((id) => getVibeById(id, vibes)).filter(Boolean);
-    const destinationColors = colorsData.filter((color) => selectedDestination.colorIds.includes(color.id));
+    const destinationColors = colors.filter((color) => selectedDestination.colorIds.includes(color.id));
     const related = getRelatedDestinations(selectedDestination.id, destinations);
     const saved = isFavouriteId(favouriteIds, selectedDestination.id);
+    const capitalDisplay = countryFacts?.capitalCity
+      ? formatCapital(selectedDestination.countryCode, countryFacts.capitalCity)
+      : '';
+    const incomeDisplay = countryFacts?.incomeLevel ? formatIncome(countryFacts.incomeLevel) : '';
     return (
       <>
-        <Pressable accessibilityRole="button" onPress={() => setSelectedDestinationId(null)} style={styles.backButton}><Text style={styles.backButtonText}>← {mode === 'dream' ? 'Dream Palette' : 'Discover'}</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setSelectedDestinationId(null)} style={styles.backButton}><Text style={styles.backButtonText}>← {mode === 'dream' ? t('dream.title') : t('nav.discover')}</Text></Pressable>
         <View style={styles.detailCard}>
           <DestinationImage destination={selectedDestination} detail />
           <View style={styles.detailBody}>
-            <Text style={styles.detailKicker}>CURATED DESTINATION</Text><Text style={styles.detailTitle}>{selectedDestination.name}</Text><Text style={styles.detailCountry}>{selectedDestination.country}</Text>
+            <Text style={styles.detailKicker}>{t('discovery.curatedDestination')}</Text><Text style={styles.detailTitle}>{selectedDestination.name}</Text><Text style={styles.detailCountry}>{selectedDestination.country}</Text>
             <Text style={styles.vibeLine}>{destinationVibes.map((vibe) => vibe.name).join(' · ')}</Text><Text style={styles.detailDescription}>{selectedDestination.description}</Text>
-            <Text style={styles.detailSectionTitle}>Colour story</Text><Text style={styles.detailDescription}>{destinationColors.map((color) => color.name).join(' · ') || selectedDestination.colorFamily}</Text>
-            <Text style={styles.detailSectionTitle}>Why it matches</Text><Text style={styles.detailDescription}>{selectedDestination.whyItMatches}</Text>
-            <Text style={styles.detailSectionTitle}>Destination palette</Text>{renderPalette(selectedDestination.palette, selectedDestination.name)}
-            <View accessibilityLabel={`Travel snapshot. ${selectedDestination.travelRegion}. Travel budget ${getBudgetDisplay(selectedDestination.budget)}${countryFacts?.capitalCity ? `. Capital ${countryFacts.capitalCity}` : ''}${countryFacts?.incomeLevel ? `. Income level ${countryFacts.incomeLevel}, World Bank classification` : ''}`} style={styles.snapshot}>
-              <Text style={styles.eyebrow}>TRAVEL SNAPSHOT</Text>
+            <Text style={styles.detailSectionTitle}>{t('discovery.colorStoryTitle')}</Text><Text style={styles.detailDescription}>{destinationColors.map((color) => color.name).join(' · ') || selectedDestination.colorFamily}</Text>
+            <Text style={styles.detailSectionTitle}>{t('discovery.whyItMatches')}</Text><Text style={styles.detailDescription}>{selectedDestination.whyItMatches}</Text>
+            <Text style={styles.detailSectionTitle}>{t('discovery.destinationPalette')}</Text>{renderPalette(selectedDestination.palette, selectedDestination.name)}
+            <View accessibilityLabel={t('snapshot.accessibility', {
+              budget: budgetDisplay(selectedDestination.budget),
+              capital: capitalDisplay ? t('snapshot.capitalA11y', { capital: capitalDisplay }) : '',
+              income: incomeDisplay ? t('snapshot.incomeA11y', { income: incomeDisplay }) : '',
+              region: selectedDestination.travelRegion,
+            })} style={styles.snapshot}>
+              <Text style={styles.eyebrow}>{t('snapshot.title')}</Text>
+              <Text style={styles.factLabel}>{t('snapshot.region')}</Text>
               <Text style={styles.snapshotRegion}>{selectedDestination.travelRegion}</Text>
-              <Text style={styles.factLabel}>Travel Budget</Text><Text style={styles.factValue}>{getBudgetDisplay(selectedDestination.budget)}</Text>
-              {countryFacts?.capitalCity ? <><Text style={styles.factLabel}>Capital</Text><Text style={styles.factValue}>{countryFacts.capitalCity}</Text></> : null}
-              {countryFacts?.incomeLevel ? <><Text style={styles.factLabel}>Income Level</Text><Text style={styles.factValue}>{countryFacts.incomeLevel}</Text><Text style={styles.sourceNote}>World Bank classification</Text></> : null}
+              <Text style={styles.factLabel}>{t('snapshot.budget')}</Text><Text style={styles.factValue}>{budgetDisplay(selectedDestination.budget)}</Text>
+              {capitalDisplay ? <><Text style={styles.factLabel}>{t('snapshot.capital')}</Text><Text style={styles.factValue}>{capitalDisplay}</Text></> : null}
+              {incomeDisplay ? <><Text style={styles.factLabel}>{t('snapshot.incomeLevel')}</Text><Text style={styles.factValue}>{incomeDisplay}</Text><Text style={styles.sourceNote}>{t('snapshot.source')}</Text></> : null}
             </View>
-            <Pressable accessibilityLabel={`${saved ? 'Remove' : 'Save'} ${selectedDestination.name} ${saved ? 'from' : 'to'} Dream Palette`} accessibilityRole="button" onPress={() => onToggleFavourite(selectedDestination.id)} style={[styles.saveButton, saved && styles.removeButton]}><Text style={[styles.saveButtonText, saved && styles.removeButtonText]}>{saved ? 'Remove from Dream Palette' : 'Save to Dream Palette'}</Text></Pressable>
+            <Pressable accessibilityLabel={t('discovery.saveDreamA11y', { action: saved ? t('common.remove') : t('common.save'), direction: saved ? t('discovery.removeDirection') : t('discovery.addDirection'), name: selectedDestination.name })} accessibilityRole="button" onPress={() => onToggleFavourite(selectedDestination.id)} style={[styles.saveButton, saved && styles.removeButton]}><Text style={[styles.saveButtonText, saved && styles.removeButtonText]}>{saved ? t('discovery.removeFromDream') : t('discovery.saveToDream')}</Text></Pressable>
             {selectedDestination.imageCredit ? <Pressable accessibilityRole="link" onPress={() => selectedDestination.imageAttributionUrl && Linking.openURL(selectedDestination.imageAttributionUrl)}><Text style={styles.credit}>{selectedDestination.imageCredit}</Text></Pressable> : null}
           </View>
         </View>
-        {related.length ? <View style={styles.relatedSection}><Text style={styles.resultsTitle}>Keep exploring</Text>{related.map((item) => renderDestinationCard(item, true))}</View> : null}
+        {related.length ? <View style={styles.relatedSection}><Text style={styles.resultsTitle}>{t('discovery.keepExploring')}</Text>{related.map((item) => renderDestinationCard(item, true))}</View> : null}
       </>
     );
   }
 
   if (mode === 'dream') return (
     <>
-      <View style={styles.intro}><Text style={styles.eyebrow}>PLACES TO REMEMBER</Text><Text style={styles.pageTitle}>Dream Palette</Text><Text style={styles.pageSubtitle}>A personal collection of destinations saved by colour and feeling.</Text></View>
-      {insights.total ? <View accessibilityLabel="Dream Palette insights" style={styles.insightsCard}><Text style={styles.eyebrow}>YOUR DREAM TRAVEL STYLE</Text><Text style={styles.insightCount}>{insights.total} {insights.total === 1 ? 'saved place' : 'saved places'}</Text><Text style={styles.insightLabel}>YOUR STRONGEST VIBE</Text><Text style={styles.insightValue}>{insights.dominantVibe?.name}</Text><Text style={styles.insightLabel}>YOUR COLOUR STORY</Text><Text style={styles.insightValue}>{insights.dominantColor?.name}</Text><Text style={styles.insightLabel}>TYPICAL BUDGET</Text><Text style={styles.insightValue}>{insights.dominantBudget ? `${insights.dominantBudget.symbol} · ${insights.dominantBudget.label}` : 'Still unfolding'}</Text><Text style={styles.insightLabel}>BUDGET MIX</Text>{insights.budgetDistribution.filter((item) => item.count > 0).map((item) => <View key={item.id} style={styles.budgetMixRow}><Text style={styles.budgetMixLabel}>{item.symbol} {item.label}</Text><Text style={styles.budgetMixCount}>{item.count}</Text></View>)}<Text style={styles.insightNote}>Based on your saved destinations and curated travel-cost categories.</Text></View> : null}
-      {dreamDestinations.length ? dreamDestinations.map((item) => renderDestinationCard(item)) : <View style={styles.emptyCard}><Text style={styles.emptyTitle}>Your Dream Palette is empty</Text><Text style={styles.emptyCopy}>Explore a vibe or colour and save places that feel like your next chapter.</Text></View>}
+      <View style={styles.intro}><Text style={styles.eyebrow}>{t('dream.kicker')}</Text><Text style={styles.pageTitle}>{t('dream.title')}</Text><Text style={styles.pageSubtitle}>{t('dream.subtitle')}</Text></View>
+      {insights.total ? <View accessibilityLabel={t('dream.insightsA11y')} style={styles.insightsCard}><Text style={styles.eyebrow}>{t('dream.styleKicker')}</Text><Text style={styles.insightCount}>{t(insights.total === 1 ? 'dream.savedPlaceOne' : 'dream.savedPlaceOther', { count: insights.total })}</Text><Text style={styles.insightLabel}>{t('dream.strongestVibe')}</Text><Text style={styles.insightValue}>{insights.dominantVibe?.name}</Text><Text style={styles.insightLabel}>{t('dream.colorStory')}</Text><Text style={styles.insightValue}>{insights.dominantColor?.name}</Text><Text style={styles.insightLabel}>{t('dream.typicalBudget')}</Text><Text style={styles.insightValue}>{insights.dominantBudget ? `${insights.dominantBudget.symbol} · ${budgetLabel(insights.dominantBudget.id)}` : t('dream.stillUnfolding')}</Text><Text style={styles.insightLabel}>{t('dream.budgetMix')}</Text>{insights.budgetDistribution.filter((item) => item.count > 0).map((item) => <View key={item.id} style={styles.budgetMixRow}><Text style={styles.budgetMixLabel}>{item.symbol} {budgetLabel(item.id)}</Text><Text style={styles.budgetMixCount}>{item.count}</Text></View>)}<Text style={styles.insightNote}>{t('dream.insightNote')}</Text></View> : null}
+      {dreamDestinations.length ? dreamDestinations.map((item) => renderDestinationCard(item)) : <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t('dream.emptyTitle')}</Text><Text style={styles.emptyCopy}>{t('dream.emptyCopy')}</Text></View>}
     </>
   );
 
   const selectedIdentity = discoveryMode === 'color' ? selectedColor : selectedVibe;
   return (
     <>
-      <View style={styles.intro}><Text style={styles.eyebrow}>FEEL → COLOUR → PLACE</Text><Text style={styles.pageTitle}>{discoveryMode === 'vibe' ? 'How do you want to feel?' : 'Where will colour take you?'}</Text><Text style={styles.pageSubtitle}>Choose a feeling or colour story to reveal locally curated destinations.</Text></View>
-      <View accessibilityLabel="Discovery method" accessibilityRole="tablist" style={styles.modeSwitch}>{[['vibe', 'By Vibe'], ['color', 'By Colour']].map(([id, label]) => { const selected = discoveryMode === id; return <Pressable accessibilityRole="tab" accessibilityState={{ selected }} key={id} onPress={() => setDiscoveryMode(id)} style={[styles.modeButton, selected && styles.modeButtonSelected]}><Text style={[styles.modeText, selected && styles.modeTextSelected]}>{label}{selected ? ' ✓' : ''}</Text></Pressable>; })}</View>
+      <View style={styles.intro}><Text style={styles.eyebrow}>{t('discovery.flow')}</Text><Text style={styles.pageTitle}>{discoveryMode === 'vibe' ? t('discovery.vibeTitle') : t('discovery.colorTitle')}</Text><Text style={styles.pageSubtitle}>{t('discovery.subtitle')}</Text></View>
+      <View accessibilityLabel={t('discovery.methodLabel')} accessibilityRole="tablist" style={styles.modeSwitch}>{[['vibe', t('discovery.byVibe')], ['color', t('discovery.byColor')]].map(([id, label]) => { const selected = discoveryMode === id; return <Pressable accessibilityRole="tab" accessibilityState={{ selected }} key={id} onPress={() => setDiscoveryMode(id)} style={[styles.modeButton, selected && styles.modeButtonSelected]}><Text style={[styles.modeText, selected && styles.modeTextSelected]}>{label}{selected ? ' ✓' : ''}</Text></Pressable>; })}</View>
       {discoveryMode === 'vibe' ? (
-        <View accessibilityLabel="Travel vibe choices" style={styles.vibeCardGrid}>
+        <View accessibilityLabel={t('discovery.vibeChoices')} style={styles.vibeCardGrid}>
           {vibes.map((vibe) => <VibeCard key={vibe.id} onPress={() => selectVibe(vibe.id)} selected={vibe.id === selectedVibeId} vibe={vibe} />)}
         </View>
       ) : (
-        <View accessibilityLabel="Travel colour choices" style={styles.colorChoiceGrid}>
-          {colorsData.map((color) => {
+        <View accessibilityLabel={t('discovery.colorChoices')} style={styles.colorChoiceGrid}>
+          {colors.map((color) => {
             const selected = color.id === selectedColorId;
             return (
-              <Pressable accessibilityLabel={`${color.name} colour story. ${color.description}${selected ? ' Selected.' : ''}`} accessibilityRole="button" accessibilityState={{ selected }} key={color.id} onPress={() => setSelectedColorId(color.id)} style={[styles.colorChoice, selected && styles.colorChoiceSelected]}>
-                <View accessibilityLabel={`${color.name} colour`} style={[styles.colorDot, { backgroundColor: color.palette[0] }]} />
-                <Text style={styles.colorName}>{color.name}</Text><Text style={styles.colorAction}>{selected ? 'Selected ✓' : 'Choose'}</Text>
+              <Pressable accessibilityLabel={t('discovery.colorChoiceA11y', { description: color.description, name: color.name, selected: selected ? t('vibeCard.selectedSuffix') : '' })} accessibilityRole="button" accessibilityState={{ selected }} key={color.id} onPress={() => setSelectedColorId(color.id)} style={[styles.colorChoice, selected && styles.colorChoiceSelected]}>
+                <View accessibilityLabel={t('discovery.colorLabel', { name: color.name })} style={[styles.colorDot, { backgroundColor: color.palette[0] }]} />
+                <Text style={styles.colorName}>{color.name}</Text><Text style={styles.colorAction}>{selected ? t('common.selected') : t('common.choose')}</Text>
               </Pressable>
             );
           })}
         </View>
       )}
-      <View accessibilityLabel="Travel budget preference" style={styles.budgetSection}>
-        <Text style={styles.budgetTitle}>TRAVEL BUDGET · OPTIONAL</Text>
-        <View style={styles.budgetControls}>{[{ id: 'any', symbol: '', label: 'Any' }, ...BUDGET_LEVELS].map((item) => { const selected = budgetPreference === item.id; return <Pressable accessibilityLabel={`${item.label} budget preference${selected ? ', selected' : ''}`} accessibilityRole="button" accessibilityState={{ selected }} key={item.id} onPress={() => setBudgetPreference(item.id)} style={[styles.budgetButton, selected && styles.budgetButtonSelected]}><Text style={[styles.budgetButtonText, selected && styles.budgetButtonTextSelected]}>{item.symbol ? `${item.symbol} ` : ''}{item.label}{selected ? ' ✓' : ''}</Text></Pressable>; })}</View>
+      <View accessibilityLabel={t('budget.accessibility')} style={styles.budgetSection}>
+        <Text style={styles.budgetTitle}>{t('budget.label')}</Text>
+        <View style={styles.budgetControls}>{[{ id: 'any', symbol: '' }, ...BUDGET_LEVELS].map((item) => { const selected = budgetPreference === item.id; const label = budgetLabel(item.id); return <Pressable accessibilityLabel={t('budget.preferenceA11y', { label, selected: selected ? t('budget.selectedSuffix') : '' })} accessibilityRole="button" accessibilityState={{ selected }} key={item.id} onPress={() => setBudgetPreference(item.id)} style={[styles.budgetButton, selected && styles.budgetButtonSelected]}><Text style={[styles.budgetButtonText, selected && styles.budgetButtonTextSelected]}>{item.symbol ? `${item.symbol} ` : ''}{label}{selected ? ' ✓' : ''}</Text></Pressable>; })}</View>
       </View>
-      {!selectedIdentity ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>Begin with {discoveryMode === 'vibe' ? 'a feeling' : 'a colour'}</Text><Text style={styles.emptyCopy}>Six curated {discoveryMode === 'vibe' ? 'vibes' : 'colour stories'} are ready when you are.</Text></View> : <><View style={[styles.identityCard, { backgroundColor: selectedIdentity.palette?.[2] || '#F4F0E8' }]}><Text style={styles.eyebrow}>{discoveryMode === 'vibe' ? selectedIdentity.colorFamily : 'CURATED COLOUR STORY'}</Text><Text style={styles.identityTitle}>{selectedIdentity.name}</Text><Text style={styles.identityDescription}>{selectedIdentity.description}</Text>{renderPalette(selectedIdentity.palette || [], selectedIdentity.name)}</View><View onLayout={handleResultsLayout}><Text style={styles.resultsTitle}>{discoveryMode === 'vibe' ? `${selectedIdentity.name} destinations` : 'Places in this colour story'}</Text>{recommendations.length ? recommendations.map((item) => renderDestinationCard(item)) : <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{baseRecommendations.length ? 'No places at this budget yet' : 'No matching places yet'}</Text>{baseRecommendations.length ? <Text style={styles.emptyCopy}>Choose Any or another budget level to see more destinations.</Text> : null}</View>}</View></>}
+      {!selectedIdentity ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t(discoveryMode === 'vibe' ? 'discovery.beginVibe' : 'discovery.beginColor')}</Text><Text style={styles.emptyCopy}>{t(discoveryMode === 'vibe' ? 'discovery.readyVibes' : 'discovery.readyColors')}</Text></View> : <><View style={[styles.identityCard, { backgroundColor: selectedIdentity.palette?.[2] || '#F4F0E8' }]}><Text style={styles.eyebrow}>{discoveryMode === 'vibe' ? selectedIdentity.colorFamily : t('discovery.curatedColorStory')}</Text><Text style={styles.identityTitle}>{selectedIdentity.name}</Text><Text style={styles.identityDescription}>{selectedIdentity.description}</Text>{renderPalette(selectedIdentity.palette || [], selectedIdentity.name)}</View><View onLayout={handleResultsLayout}><Text style={styles.resultsTitle}>{discoveryMode === 'vibe' ? t('discovery.vibeDestinations', { name: selectedIdentity.name }) : t('discovery.colorDestinations')}</Text>{recommendations.length ? recommendations.map((item) => renderDestinationCard(item)) : <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t(baseRecommendations.length ? 'discovery.noBudgetMatches' : 'discovery.noMatches')}</Text>{baseRecommendations.length ? <Text style={styles.emptyCopy}>{t('discovery.chooseAnotherBudget')}</Text> : null}</View>}</View></>}
     </>
   );
 }

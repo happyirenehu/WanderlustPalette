@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useLanguage } from '../context/LanguageContext.js';
 import getContrastColor from '../utils/accessibility.js';
 import getDisplayImageUri from '../utils/imageSources.js';
 
 export default function VibeCard({ onPress, selected, vibe }) {
+  const { t } = useLanguage();
   const imageUri = getDisplayImageUri(vibe.imageUri);
   const fallbackColor = vibe.palette[0] || '#315C72';
   const fallbackTextColor = getContrastColor(fallbackColor);
@@ -18,7 +20,11 @@ export default function VibeCard({ onPress, selected, vibe }) {
 
   return (
     <Pressable
-      accessibilityLabel={`${vibe.name} vibe. ${vibe.description}${selected ? ' Selected.' : ''}`}
+      accessibilityLabel={t('vibeCard.accessibility', {
+        description: vibe.description,
+        name: vibe.name,
+        selected: selected ? t('vibeCard.selectedSuffix') : '',
+      })}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
@@ -39,7 +45,7 @@ export default function VibeCard({ onPress, selected, vibe }) {
       <View style={styles.copy}>
         <Text style={[styles.name, { color: failed ? fallbackTextColor : '#FFFFFF' }]}>{vibe.name}</Text>
         <Text style={[styles.description, { color: failed ? fallbackTextColor : '#FFFFFF' }]}>{vibe.description}</Text>
-        <Text style={[styles.action, { color: failed ? fallbackTextColor : '#FFFFFF' }]}>{selected ? 'Selected ✓' : 'Choose'}</Text>
+        <Text style={[styles.action, { color: failed ? fallbackTextColor : '#FFFFFF' }]}>{selected ? t('common.selected') : t('common.choose')}</Text>
       </View>
     </Pressable>
   );

@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 
+import { useLanguage } from '../context/LanguageContext.js';
 import getContrastColor from '../utils/accessibility.js';
 import getDisplayImageUri from '../utils/imageSources.js';
 
 export default function DestinationImage({ destination, detail = false }) {
+  const { t } = useLanguage();
   const imageUri = getDisplayImageUri(destination?.imageUri);
   const fallbackColor = destination?.palette?.[0] || '#E8EEF2';
   const [loading, setLoading] = useState(Boolean(imageUri));
@@ -19,7 +21,7 @@ export default function DestinationImage({ destination, detail = false }) {
     <View style={[styles.frame, detail ? styles.detailFrame : styles.cardFrame, { backgroundColor: fallbackColor }]}>
       {imageUri && !failed ? (
         <Image
-          accessibilityLabel={destination.imageAlt || `${destination.name} travel photograph`}
+          accessibilityLabel={destination.imageAlt || t('images.travelPhoto', { name: destination.name })}
           onError={() => {
             setFailed(true);
             setLoading(false);
@@ -31,13 +33,13 @@ export default function DestinationImage({ destination, detail = false }) {
         />
       ) : null}
       {loading && !failed ? (
-        <View accessibilityLabel={`Loading ${destination.name} image`} style={styles.loading}>
+        <View accessibilityLabel={t('images.loading', { name: destination.name })} style={styles.loading}>
           <ActivityIndicator color={getContrastColor(fallbackColor)} />
         </View>
       ) : null}
       {failed ? (
         <View style={styles.fallback}>
-          <Text style={[styles.fallbackText, { color: getContrastColor(fallbackColor) }]}>COLOUR OF PLACE</Text>
+          <Text style={[styles.fallbackText, { color: getContrastColor(fallbackColor) }]}>{t('images.fallback')}</Text>
         </View>
       ) : null}
     </View>

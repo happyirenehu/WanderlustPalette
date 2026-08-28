@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import mockData from '../assets/mockData.json';
 import SignatureScreen from './SignatureScreen.js';
+import { useLanguage } from '../context/LanguageContext.js';
 import getContrastColor from '../utils/accessibility.js';
 import { addFavouriteId, isFavouriteId, removeFavouriteId } from '../utils/dreamPalette.js';
 import { loadFavouriteIds, saveFavouriteIds } from '../utils/dreamPaletteStorage.js';
@@ -23,12 +24,22 @@ import { loadJourneys, saveJourneys } from '../utils/journeyStorage.js';
 import getDisplayImageUri from '../utils/imageSources.js';
 import { cleanupOwnedJourneyPhoto, copyPersonalJourneyPhoto } from '../utils/journeyPhotoStorage.js';
 import normalizePhotoPickerResult from '../utils/photoPicker.js';
+import getExpenseInsights from '../utils/expenseInsights.js';
 
 const ACTIVE_THEME_KEY = '@wanderlust_palette/active_theme';
 const DEFAULT_THEME = mockData[0]?.palette[0] || '#F7FAFC';
 const EMPTY_FORM = { destination: '', country: '', date: '', notes: '' };
 
 export default function HomeScreen() {
+  const {
+    clearLanguageError,
+    formatExpenseCategory,
+    languageError,
+    locale,
+    localizeMessage,
+    setLocale,
+    t,
+  } = useLanguage();
   const scrollViewRef = useRef(null);
   const sampleJourneys = useMemo(() => normalizeJourneys(mockData), []);
   const [journeys, setJourneys] = useState(sampleJourneys);
@@ -147,7 +158,7 @@ export default function HomeScreen() {
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        setPhotoFeedback('Photo access was not granted. You can continue without changing the photo.');
+        setPhotoFeedback('photo.permissionDenied');
         return;
       }
 
@@ -160,12 +171,12 @@ export default function HomeScreen() {
       }));
       if (pickerResult.status === 'cancelled') return;
       if (pickerResult.status !== 'selected') {
-        setPhotoFeedback('That photo could not be selected. Please try another image.');
+        setPhotoFeedback('photo.invalidSelection');
         return;
       }
       setPendingPhoto(pickerResult.asset);
     } catch (error) {
-      setPhotoFeedback('Photos are unavailable right now. You can continue editing your journey.');
+      setPhotoFeedback('photo.unavailableFeedback');
     }
   };
 
@@ -228,12 +239,12 @@ export default function HomeScreen() {
 
   const requestDelete = (journey) => {
     Alert.alert(
-      'Delete journey?',
-      `${journey.destination}, ${journey.country} will be removed from this device.`,
+      t('journeys.deleteTitle'),
+      t('journeys.deleteMessage', { country: journey.country, destination: journey.destination }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             const result = deleteJourney(journeys, journey.id);
@@ -251,17 +262,18 @@ export default function HomeScreen() {
     setFormErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
   };
 
-  const renderJourneyImage = (imageUri, imageStyle) => {
+  const renderJourneyImage = (imageUri, imageStyle, accessibilityLabel = t('photo.existingA11y')) => {
     if (!imageUri) return null;
     if (failedImageUris.has(imageUri)) {
       return (
-        <View style={[imageStyle, styles.imageFallback]}>
-          <Text style={styles.imageFallbackText}>Photo unavailable</Text>
+        <View accessibilityLabel={t('photo.unavailable')} style={[imageStyle, styles.imageFallback]}>
+          <Text style={styles.imageFallbackText}>{t('photo.unavailable')}</Text>
         </View>
       );
     }
     return (
       <Image
+        accessibilityLabel={accessibilityLabel}
         onError={() => setFailedImageUris((current) => new Set(current).add(imageUri))}
         source={{ uri: getDisplayImageUri(imageUri) }}
         style={imageStyle}
@@ -276,7 +288,7 @@ export default function HomeScreen() {
       <View style={styles.paletteRow}>
         {journey.palette.slice(0, 5).map((color) => (
           <Pressable
-            accessibilityLabel={`Set theme to ${color}`}
+            accessibilityLabel={t('journeys.themeA11y', { color })}
             key={color}
             onPress={(event) => {
               event.stopPropagation();
@@ -289,30 +301,60 @@ export default function HomeScreen() {
     );
   };
 
+  const formatAmount = (amount) => new Intl.NumberFormat(locale === 'zh-Hant' ? 'zh-Hant' : 'en', {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }).format(amount);
+
+  const renderExpenseSummary = (journey) => {
+    const insights = getExpenseInsights(journey.expenses);
+    const recordedTotal = Number.isFinite(journey.totalCost) ? journey.totalCost : null;
+    const totalsDiffer = recordedTotal !== null && Math.abs(recordedTotal - insights.calculatedTotal) > 0.005;
+    return (
+      <View accessibilityLabel={t('expenses.title')} style={styles.expenseSummary}>
+        <Text style={styles.expenseTitle}>{t('expenses.title')}</Text>
+        {!insights.validExpenseCount ? <Text style={styles.expenseEmpty}>{t('expenses.empty')}</Text> : (
+          <>
+            <View style={styles.expenseHighlightRow}>
+              <View style={styles.expenseHighlight}><Text style={styles.expenseLabel}>{t('expenses.calculatedTotal')}</Text><Text style={styles.expenseValue}>{formatAmount(insights.calculatedTotal)}</Text></View>
+              <View style={styles.expenseHighlight}><Text style={styles.expenseLabel}>{t('expenses.entries')}</Text><Text style={styles.expenseValue}>{insights.validExpenseCount}</Text></View>
+            </View>
+            {totalsDiffer ? <View style={styles.expenseRow}><Text style={styles.expenseCategory}>{t('expenses.recordedTotal')}</Text><Text style={styles.expenseAmount}>{formatAmount(recordedTotal)}</Text></View> : null}
+            <Text style={styles.expenseLabel}>{t('expenses.largestCategory')}</Text>
+            <Text style={styles.expenseLargest}>{formatExpenseCategory(insights.largestCategory.category)} · {formatAmount(insights.largestCategory.amount)}</Text>
+            <Text style={styles.expenseLabel}>{t('expenses.byCategory')}</Text>
+            {insights.categoryTotals.map((item) => <View key={item.category} style={styles.expenseRow}><Text style={styles.expenseCategory}>{formatExpenseCategory(item.category)}</Text><Text style={styles.expenseAmount}>{formatAmount(item.amount)}</Text></View>)}
+            <Text style={styles.expenseNote}>{t('expenses.derivedNote')}</Text>
+          </>
+        )}
+      </View>
+    );
+  };
+
   const renderList = () => (
     <>
       <View style={styles.headerRow}>
         <View style={styles.headerCopy}>
-          <Text style={[styles.kicker, { color: textColor }]}>MY JOURNEYS</Text>
-          <Text style={[styles.title, { color: textColor }]}>Wanderlust</Text>
-          <Text style={[styles.subtitle, { color: textColor }]}>A palette of places worth remembering.</Text>
+          <Text style={[styles.kicker, { color: textColor }]}>{t('journeys.kicker')}</Text>
+          <Text style={[styles.title, { color: textColor }]}>{t('journeys.title')}</Text>
+          <Text style={[styles.subtitle, { color: textColor }]}>{t('journeys.subtitle')}</Text>
         </View>
         <Pressable accessibilityRole="button" onPress={openAddForm} style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>Add</Text>
+          <Text style={styles.primaryButtonText}>{t('journeys.add')}</Text>
         </Pressable>
       </View>
 
       {journeys.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>No journeys yet</Text>
-          <Text style={styles.emptyCopy}>Add your first destination to begin your travel journal.</Text>
+          <Text style={styles.emptyTitle}>{t('journeys.emptyTitle')}</Text>
+          <Text style={styles.emptyCopy}>{t('journeys.emptyCopy')}</Text>
           <Pressable onPress={openAddForm} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Add journey</Text>
+            <Text style={styles.primaryButtonText}>{t('journeys.addJourney')}</Text>
           </Pressable>
         </View>
       ) : journeys.map((journey) => (
         <Pressable
-          accessibilityHint="Opens journey details"
+          accessibilityHint={t('journeys.openHint')}
           key={journey.id}
           onPress={() => openDetail(journey)}
           style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -334,10 +376,10 @@ export default function HomeScreen() {
     if (!selectedJourney) {
       return (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyTitle}>Journey not found</Text>
-          <Text style={styles.emptyCopy}>It may have been removed from this device.</Text>
+          <Text style={styles.emptyTitle}>{t('journeys.notFound')}</Text>
+          <Text style={styles.emptyCopy}>{t('journeys.notFoundCopy')}</Text>
           <Pressable onPress={openList} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Back to journeys</Text>
+            <Text style={styles.primaryButtonText}>{t('journeys.back')}</Text>
           </Pressable>
         </View>
       );
@@ -346,21 +388,22 @@ export default function HomeScreen() {
     return (
       <>
         <Pressable onPress={openList} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← My Journeys</Text>
+          <Text style={styles.backButtonText}>← {t('journeys.myJourneys')}</Text>
         </Pressable>
         <View style={styles.detailCard}>
           {renderJourneyImage(selectedJourney.imageUri, styles.detailImage)}
           <Text style={styles.cardDate}>{selectedJourney.date}</Text>
           <Text style={styles.detailTitle}>{selectedJourney.destination}</Text>
           <Text style={styles.detailCountry}>{selectedJourney.country}</Text>
-          <Text style={styles.detailNotes}>{selectedJourney.notes || 'No notes added.'}</Text>
+          <Text style={styles.detailNotes}>{selectedJourney.notes || t('journeys.noNotes')}</Text>
           {renderPalette(selectedJourney)}
+          {renderExpenseSummary(selectedJourney)}
           <View style={styles.actionRow}>
             <Pressable onPress={() => openEditForm(selectedJourney)} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>Edit</Text>
+              <Text style={styles.secondaryButtonText}>{t('common.edit')}</Text>
             </Pressable>
             <Pressable onPress={() => requestDelete(selectedJourney)} style={styles.deleteButton}>
-              <Text style={styles.deleteButtonText}>Delete</Text>
+              <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
             </Pressable>
           </View>
         </View>
@@ -379,37 +422,37 @@ export default function HomeScreen() {
         style={[styles.input, options.multiline && styles.notesInput, formErrors[field] && styles.inputError]}
         value={form[field]}
       />
-      {formErrors[field] ? <Text style={styles.errorText}>{formErrors[field]}</Text> : null}
+      {formErrors[field] ? <Text style={styles.errorText}>{localizeMessage(formErrors[field])}</Text> : null}
     </View>
   );
 
   const renderForm = () => (
     <>
       <Pressable onPress={() => (editingId && selectedJourney ? setScreen('detail') : openList())} style={styles.backButton}>
-        <Text style={styles.backButtonText}>← Cancel</Text>
+        <Text style={styles.backButtonText}>← {t('common.cancel')}</Text>
       </Pressable>
       <View style={styles.formCard}>
-        <Text style={styles.formTitle}>{editingId ? 'Edit journey' : 'Add journey'}</Text>
-        <Text style={styles.formSubtitle}>Required fields are marked with an asterisk.</Text>
-        {renderField('destination', 'Destination *', { placeholder: 'Kyoto' })}
-        {renderField('country', 'Country *', { placeholder: 'Japan' })}
-        {renderField('date', 'Date *', { placeholder: 'YYYY-MM-DD' })}
-        {renderField('notes', 'Notes', { multiline: true, placeholder: 'What made this journey memorable?' })}
+        <Text style={styles.formTitle}>{editingId ? t('journeys.editTitle') : t('journeys.addTitle')}</Text>
+        <Text style={styles.formSubtitle}>{t('journeys.required')}</Text>
+        {renderField('destination', t('journeys.destination'), { placeholder: t('journeys.destinationPlaceholder') })}
+        {renderField('country', t('journeys.country'), { placeholder: t('journeys.countryPlaceholder') })}
+        {renderField('date', t('journeys.date'), { placeholder: t('journeys.datePlaceholder') })}
+        {renderField('notes', t('journeys.notes'), { multiline: true, placeholder: t('journeys.notesPlaceholder') })}
         <View style={styles.photoField}>
-          <Text style={styles.label}>Personal photo</Text>
+          <Text style={styles.label}>{t('photo.field')}</Text>
           {pendingPhoto?.uri
-            ? <Image source={{ uri: pendingPhoto.uri }} style={styles.photoPreview} />
+            ? <Image accessibilityLabel={t('photo.previewA11y')} source={{ uri: pendingPhoto.uri }} style={styles.photoPreview} />
             : editingId && selectedJourney?.imageUri
               ? renderJourneyImage(selectedJourney.imageUri, styles.photoPreview)
-              : <View style={[styles.photoPreview, styles.imageFallback]}><Text style={styles.imageFallbackText}>No photo selected</Text></View>}
-          <Pressable accessibilityRole="button" onPress={choosePersonalPhoto} style={styles.secondaryButtonWide}>
-            <Text style={styles.secondaryButtonText}>{editingId && selectedJourney?.imageSource === 'personal' ? 'Replace Personal Photo' : 'Choose Personal Photo'}</Text>
+              : <View accessibilityLabel={t('photo.noneSelected')} style={[styles.photoPreview, styles.imageFallback]}><Text style={styles.imageFallbackText}>{t('photo.noneSelected')}</Text></View>}
+          <Pressable accessibilityLabel={editingId && selectedJourney?.imageSource === 'personal' ? t('photo.replace') : t('photo.choose')} accessibilityRole="button" onPress={choosePersonalPhoto} style={styles.secondaryButtonWide}>
+            <Text style={styles.secondaryButtonText}>{editingId && selectedJourney?.imageSource === 'personal' ? t('photo.replace') : t('photo.choose')}</Text>
           </Pressable>
-          {photoFeedback ? <Text accessibilityRole="alert" style={styles.photoFeedback}>{photoFeedback}</Text> : null}
+          {photoFeedback ? <Text accessibilityRole="alert" style={styles.photoFeedback}>{t(photoFeedback)}</Text> : null}
         </View>
-        {formErrors.form ? <Text style={styles.errorText}>{formErrors.form}</Text> : null}
+        {formErrors.form ? <Text style={styles.errorText}>{localizeMessage(formErrors.form)}</Text> : null}
         <Pressable onPress={submitForm} style={styles.primaryButtonWide}>
-          <Text style={styles.primaryButtonText}>{editingId ? 'Save changes' : 'Save journey'}</Text>
+          <Text style={styles.primaryButtonText}>{editingId ? t('journeys.saveChanges') : t('journeys.saveJourney')}</Text>
         </Pressable>
       </View>
     </>
@@ -423,16 +466,42 @@ export default function HomeScreen() {
       ref={scrollViewRef}
       style={[styles.screen, { backgroundColor: activeTheme }]}
     >
-      <View accessibilityLabel="Main sections" accessibilityRole="tablist" style={styles.sectionNav}>
+      <View accessibilityLabel={t('language.controlLabel')} accessibilityRole="tablist" style={styles.languageControl}>
         {[
-          ['discover', 'Discover'],
-          ['dream', 'Dream Palette'],
-          ['journeys', 'My Journeys'],
+          ['en', t('language.english')],
+          ['zh-Hant', t('language.traditionalChinese')],
+        ].map(([id, label]) => {
+          const selected = locale === id;
+          return (
+            <Pressable
+              accessibilityLabel={`${label}${selected ? `, ${t('language.selected')}` : ''}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
+              key={id}
+              onPress={() => setLocale(id)}
+              style={[styles.languageButton, selected && styles.languageButtonSelected]}
+            >
+              <Text style={[styles.languageButtonText, selected && styles.languageButtonTextSelected]}>{label}{selected ? ' ✓' : ''}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {languageError ? (
+        <View accessibilityRole="alert" style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{t(languageError)}</Text>
+          <Pressable onPress={clearLanguageError}><Text style={styles.dismissText}>{t('common.dismiss')}</Text></Pressable>
+        </View>
+      ) : null}
+      <View accessibilityLabel={t('nav.label')} accessibilityRole="tablist" style={styles.sectionNav}>
+        {[
+          ['discover', t('nav.discover')],
+          ['dream', t('nav.dream')],
+          ['journeys', t('nav.journeys')],
         ].map(([id, label]) => {
           const selected = section === id;
           return (
             <Pressable
-              accessibilityLabel={`${label}${selected ? ', selected' : ''}`}
+              accessibilityLabel={`${label}${selected ? `, ${t('language.selected')}` : ''}`}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
               key={id}
@@ -446,17 +515,17 @@ export default function HomeScreen() {
       </View>
       {section === 'journeys' && storageError ? (
         <View accessibilityRole="alert" style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>{storageError}</Text>
+          <Text style={styles.errorBannerText}>{localizeMessage(storageError)}</Text>
           <Pressable onPress={() => setStorageError('')}>
-            <Text style={styles.dismissText}>Dismiss</Text>
+            <Text style={styles.dismissText}>{t('common.dismiss')}</Text>
           </Pressable>
         </View>
       ) : null}
       {section !== 'journeys' && dreamStorageError ? (
         <View accessibilityRole="alert" style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>{dreamStorageError}</Text>
+          <Text style={styles.errorBannerText}>{localizeMessage(dreamStorageError)}</Text>
           <Pressable onPress={() => setDreamStorageError('')}>
-            <Text style={styles.dismissText}>Dismiss</Text>
+            <Text style={styles.dismissText}>{t('common.dismiss')}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -482,6 +551,11 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   screen: { flex: 1 },
   content: { flexGrow: 1, padding: 24 },
+  languageControl: { alignSelf: 'flex-end', backgroundColor: '#FFFFFF', borderRadius: 8, flexDirection: 'row', marginBottom: 10, padding: 3 },
+  languageButton: { alignItems: 'center', borderRadius: 6, justifyContent: 'center', minHeight: 38, minWidth: 58, paddingHorizontal: 10 },
+  languageButtonSelected: { backgroundColor: '#17202A' },
+  languageButtonText: { color: '#667085', fontSize: 12, fontWeight: '800' },
+  languageButtonTextSelected: { color: '#FFFFFF' },
   sectionNav: { backgroundColor: '#FFFFFF', borderRadius: 9, flexDirection: 'row', gap: 4, marginBottom: 22, padding: 4 },
   sectionTab: { alignItems: 'center', borderRadius: 7, flex: 1, justifyContent: 'center', minHeight: 42, paddingHorizontal: 6, paddingVertical: 9 },
   sectionTabSelected: { backgroundColor: '#17202A' },
@@ -517,6 +591,18 @@ const styles = StyleSheet.create({
   detailTitle: { color: '#17202A', fontSize: 36, fontWeight: '800', marginTop: 8 },
   detailCountry: { color: '#667085', fontSize: 18, fontWeight: '600', marginTop: 2 },
   detailNotes: { color: '#4B5563', fontSize: 16, lineHeight: 24, marginTop: 20 },
+  expenseSummary: { backgroundColor: '#F4F7F8', borderRadius: 8, marginTop: 24, padding: 16 },
+  expenseTitle: { color: '#17202A', fontSize: 16, fontWeight: '900', letterSpacing: 0.8, marginBottom: 12 },
+  expenseHighlightRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  expenseHighlight: { flex: 1 },
+  expenseLabel: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 0.6, marginTop: 10, textTransform: 'uppercase' },
+  expenseValue: { color: '#17202A', fontSize: 22, fontWeight: '900', marginTop: 3 },
+  expenseLargest: { color: '#8D4F5B', fontSize: 16, fontWeight: '800', marginTop: 4 },
+  expenseRow: { flexDirection: 'row', gap: 12, justifyContent: 'space-between', marginTop: 8 },
+  expenseCategory: { color: '#344054', flex: 1, fontSize: 13, fontWeight: '700' },
+  expenseAmount: { color: '#17202A', fontSize: 13, fontWeight: '900' },
+  expenseNote: { color: '#667085', fontSize: 11, lineHeight: 16, marginTop: 14 },
+  expenseEmpty: { color: '#667085', fontSize: 13, lineHeight: 19 },
   actionRow: { flexDirection: 'row', gap: 12, marginTop: 28 },
   secondaryButton: { alignItems: 'center', backgroundColor: '#E8EEF2', borderRadius: 8, flex: 1, padding: 13 },
   secondaryButtonText: { color: '#17202A', fontWeight: '700' },
