@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import mockData from '../assets/mockData.json';
 import SignatureScreen from './SignatureScreen.js';
@@ -67,6 +68,9 @@ export default function HomeScreen() {
   const textColor = getContrastColor(activeTheme);
   const resetScrollPosition = useCallback(() => {
     scrollViewRef.current?.scrollTo({ animated: false, y: 0 });
+  }, []);
+  const scrollToDiscoveryResults = useCallback((y) => {
+    scrollViewRef.current?.scrollTo({ animated: true, y: Math.max(0, y - 8) });
   }, []);
 
   const selectTheme = async (color) => {
@@ -309,7 +313,8 @@ export default function HomeScreen() {
   );
 
   return (
-    <ScrollView
+    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={[styles.safeArea, { backgroundColor: activeTheme }]}>
+      <ScrollView
       contentContainerStyle={[styles.content, { backgroundColor: activeTheme }]}
       keyboardShouldPersistTaps="handled"
       ref={scrollViewRef}
@@ -357,6 +362,7 @@ export default function HomeScreen() {
           favouriteIds={favouriteIds}
           mode={section}
           onDestinationChange={resetScrollPosition}
+          onRecommendationReady={scrollToDiscoveryResults}
           onSelectTheme={selectTheme}
           onToggleFavourite={toggleFavourite}
         />
@@ -364,11 +370,13 @@ export default function HomeScreen() {
       {section === 'journeys' && screen === 'list' ? renderList() : null}
       {section === 'journeys' && screen === 'detail' ? renderDetail() : null}
       {section === 'journeys' && screen === 'form' ? renderForm() : null}
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
   screen: { flex: 1 },
   content: { flexGrow: 1, padding: 24 },
   sectionNav: { backgroundColor: '#FFFFFF', borderRadius: 9, flexDirection: 'row', gap: 4, marginBottom: 22, padding: 4 },
