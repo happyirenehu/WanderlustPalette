@@ -18,16 +18,11 @@ import { addFavouriteId, isFavouriteId, removeFavouriteId } from '../utils/dream
 import { loadFavouriteIds, saveFavouriteIds } from '../utils/dreamPaletteStorage.js';
 import { addJourney, deleteJourney, normalizeJourneys, updateJourney } from '../utils/journeys.js';
 import { loadJourneys, saveJourneys } from '../utils/journeyStorage.js';
+import getDisplayImageUri from '../utils/imageSources.js';
 
 const ACTIVE_THEME_KEY = '@wanderlust_palette/active_theme';
 const DEFAULT_THEME = mockData[0]?.palette[0] || '#F7FAFC';
 const EMPTY_FORM = { destination: '', country: '', date: '', notes: '' };
-
-function getDisplayImageUri(imageUri) {
-  if (!imageUri.startsWith('https://images.unsplash.com/')) return imageUri;
-  const separator = imageUri.includes('?') ? '&' : '?';
-  return `${imageUri}${separator}fit=max&w=1200&q=80`;
-}
 
 export default function HomeScreen() {
   const sampleJourneys = useMemo(() => normalizeJourneys(mockData), []);

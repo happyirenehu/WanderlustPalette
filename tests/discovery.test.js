@@ -1,11 +1,14 @@
 import destinations from '../data/destinations';
 import vibes from '../data/vibes';
+import colors from '../data/colors';
 import {
+  getRelatedDestinations,
   getVibeById,
   normalizeDestination,
   normalizeDestinations,
   normalizeVibe,
   recommendDestinations,
+  recommendDestinationsByColor,
   resolveDestinationIds,
 } from '../utils/discovery';
 
@@ -17,7 +20,7 @@ describe('vibe and destination data safety', () => {
 
   test('normalizes a vibe with a missing palette', () => {
     expect(normalizeVibe({ id: 'quiet', name: 'Quiet' })).toEqual({
-      id: 'quiet', name: 'Quiet', description: '', colorFamily: '', palette: [],
+      id: 'quiet', name: 'Quiet', colorId: '', description: '', colorFamily: '', palette: [],
     });
   });
 
@@ -32,6 +35,38 @@ describe('vibe and destination data safety', () => {
   test('prevents duplicate catalogue destinations', () => {
     const duplicate = { id: 'one', name: 'One', country: 'A', vibeIds: ['calm'] };
     expect(normalizeDestinations([duplicate, { ...duplicate, name: 'Duplicate' }])).toHaveLength(1);
+  });
+});
+
+describe('colour-led and related discovery', () => {
+  test('recommends a valid colour in catalogue order and supports multiple colours', () => {
+    const ocean = recommendDestinationsByColor('ocean-blue', destinations, colors);
+    expect(ocean.map((item) => item.id)).toEqual(['santorini-greece', 'milos-greece', 'lake-bled-slovenia', 'madeira-portugal', 'azores-portugal', 'lofoten-norway', 'queenstown-new-zealand']);
+    expect(recommendDestinationsByColor('forest-green', destinations, colors).map((item) => item.id)).toContain('lake-bled-slovenia');
+  });
+
+  test('rejects unknown or malformed colours and empty catalogues', () => {
+    expect(recommendDestinationsByColor('unknown', destinations, colors)).toEqual([]);
+    expect(recommendDestinationsByColor(null, destinations, colors)).toEqual([]);
+    expect(recommendDestinationsByColor('ocean-blue', [], colors)).toEqual([]);
+  });
+
+  test('deduplicates colour results and remains deterministic', () => {
+    const item = { id: 'one', name: 'One', country: 'A', vibeIds: ['calm'], colorIds: ['ocean-blue'] };
+    expect(recommendDestinationsByColor('ocean-blue', [item, item, null], colors)).toHaveLength(1);
+    expect(recommendDestinationsByColor('ocean-blue', destinations, colors)).toEqual(recommendDestinationsByColor('ocean-blue', destinations, colors));
+  });
+
+  test('scores related destinations, excludes current, breaks ties by catalogue order, and limits to three', () => {
+    const related = getRelatedDestinations('santorini-greece', destinations);
+    expect(related).toHaveLength(3);
+    expect(related.map((item) => item.id)).not.toContain('santorini-greece');
+    expect(related[0].id).toBe('kyoto-japan');
+  });
+
+  test('handles unknown, malformed, duplicate, and empty related catalogues', () => {
+    expect(getRelatedDestinations('unknown', destinations)).toEqual([]);
+    expect(getRelatedDestinations('one', [null, { id: 'one', name: 'One', country: 'A', vibeIds: ['x'], colorIds: [] }])).toEqual([]);
   });
 });
 

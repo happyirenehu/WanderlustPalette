@@ -15,6 +15,7 @@ export function normalizeVibe(value) {
   return {
     id,
     name,
+    colorId: cleanText(value.colorId),
     description: cleanText(value.description),
     colorFamily: cleanText(value.colorFamily),
     palette: cleanStringList(value.palette),
@@ -44,11 +45,17 @@ export function normalizeDestination(value) {
     id,
     name,
     country,
+    countryCode: cleanText(value.countryCode).toUpperCase(),
     vibeIds,
+    colorIds: cleanStringList(value.colorIds),
     colorFamily: cleanText(value.colorFamily),
     palette: cleanStringList(value.palette),
     description: cleanText(value.description),
     whyItMatches: cleanText(value.whyItMatches),
+    imageUri: cleanText(value.imageUri),
+    imageAlt: cleanText(value.imageAlt),
+    imageCredit: cleanText(value.imageCredit),
+    imageAttributionUrl: cleanText(value.imageAttributionUrl),
   };
 }
 
@@ -71,6 +78,33 @@ export function getVibeById(vibeId, vibes) {
 export function recommendDestinations(vibeId, catalogue, vibes) {
   if (!getVibeById(vibeId, vibes)) return [];
   return normalizeDestinations(catalogue).filter((destination) => destination.vibeIds.includes(vibeId));
+}
+
+export function recommendDestinationsByColor(colorId, catalogue, colors) {
+  const id = cleanText(colorId);
+  const validColor = Array.isArray(colors) && colors.some((color) => (
+    color && typeof color === 'object' && cleanText(color.id) === id
+  ));
+  if (!validColor) return [];
+  return normalizeDestinations(catalogue).filter((destination) => destination.colorIds.includes(id));
+}
+
+export function getRelatedDestinations(destinationId, catalogue, limit = 3) {
+  const destinations = normalizeDestinations(catalogue);
+  const current = destinations.find((destination) => destination.id === cleanText(destinationId));
+  if (!current) return [];
+
+  return destinations
+    .map((destination, index) => {
+      if (destination.id === current.id) return null;
+      const sharedVibes = destination.vibeIds.filter((id) => current.vibeIds.includes(id)).length;
+      const sharedColors = destination.colorIds.filter((id) => current.colorIds.includes(id)).length;
+      return { destination, index, score: (sharedVibes * 2) + sharedColors };
+    })
+    .filter((item) => item && item.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, Math.max(0, Number.isFinite(limit) ? limit : 3))
+    .map((item) => item.destination);
 }
 
 export function resolveDestinationIds(ids, catalogue) {

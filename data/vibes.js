@@ -1,6 +1,7 @@
 const vibes = [
   {
     id: 'calm',
+    colorId: 'ocean-blue',
     name: 'Calm',
     description: 'Quiet horizons, clear water, and room to breathe.',
     colorFamily: 'Aegean blues',
@@ -8,6 +9,7 @@ const vibes = [
   },
   {
     id: 'dreamy',
+    colorId: 'lavender',
     name: 'Dreamy',
     description: 'Soft light, gentle colour, and places that feel suspended in time.',
     colorFamily: 'Lavender pastels',
@@ -15,6 +17,7 @@ const vibes = [
   },
   {
     id: 'warm',
+    colorId: 'terracotta',
     name: 'Warm',
     description: 'Sun-baked walls, shared tables, and long amber evenings.',
     colorFamily: 'Terracotta sunsets',
@@ -22,6 +25,7 @@ const vibes = [
   },
   {
     id: 'wild',
+    colorId: 'forest-green',
     name: 'Wild',
     description: 'Elemental landscapes, deep greens, and untamed edges.',
     colorFamily: 'Forest earth tones',
@@ -29,6 +33,7 @@ const vibes = [
   },
   {
     id: 'romantic',
+    colorId: 'dusty-rose',
     name: 'Romantic',
     description: 'Rose-toned streets, intimate corners, and unhurried beauty.',
     colorFamily: 'Dusty rose',
@@ -36,6 +41,7 @@ const vibes = [
   },
   {
     id: 'energetic',
+    colorId: 'citrus',
     name: 'Energetic',
     description: 'Vivid colour, lively streets, and momentum from morning onward.',
     colorFamily: 'Citrus brights',
