@@ -18,6 +18,19 @@ describe('vibe and destination data safety', () => {
     expect(vibes.every((vibe) => vibe.palette.length >= 4)).toBe(true);
   });
 
+  test('keeps six canonical colours and distinguishes Terracotta from Golden while retaining the citrus ID', () => {
+    expect(colors).toHaveLength(6);
+    const terracotta = colors.find((color) => color.id === 'terracotta');
+    const golden = colors.find((color) => color.id === 'citrus');
+    expect(golden.name).toBe('Golden');
+    expect(golden.palette).not.toEqual(terracotta.palette);
+  });
+
+  test('provides curated travel region and budget metadata for all destinations', () => {
+    expect(destinations.every((item) => item.travelRegion)).toBe(true);
+    expect(destinations.every((item) => ['budget', 'moderate', 'premium'].includes(item.budget))).toBe(true);
+  });
+
   test('normalizes a vibe with a missing palette', () => {
     expect(normalizeVibe({ id: 'quiet', name: 'Quiet' })).toEqual({
       id: 'quiet', name: 'Quiet', colorId: '', description: '', colorFamily: '', palette: [],

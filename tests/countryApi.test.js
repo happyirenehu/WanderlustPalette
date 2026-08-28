@@ -2,13 +2,15 @@ import { fetchCountryFacts, normalizeCountryResponse } from '../utils/countryApi
 
 const payload = [
   { page: 1 },
-  [{ iso2Code: 'JP', name: 'Japan', capitalCity: 'Tokyo', region: { value: 'East Asia & Pacific' } }],
+  [{ iso2Code: 'JP', name: 'Japan', capitalCity: 'Tokyo', region: { value: 'East Asia & Pacific' }, incomeLevel: { value: 'High income' } }],
 ];
 
 describe('World Bank country API', () => {
   test('normalizes a valid response and partial useful fields', () => {
-    expect(normalizeCountryResponse(payload)).toEqual({ countryCode: 'JP', countryName: 'Japan', capitalCity: 'Tokyo', region: 'East Asia & Pacific' });
-    expect(normalizeCountryResponse([{}, [{ iso2Code: 'JP', name: 'Japan', capitalCity: '', region: { value: 'Asia' } }]])).toMatchObject({ capitalCity: '', region: 'Asia' });
+    expect(normalizeCountryResponse(payload)).toEqual({ countryCode: 'JP', countryName: 'Japan', capitalCity: 'Tokyo', region: 'East Asia & Pacific', incomeLevel: 'High income' });
+    expect(normalizeCountryResponse([{}, [{ iso2Code: 'JP', name: 'Japan', capitalCity: '', region: { value: 'Asia' } }]])).toMatchObject({ capitalCity: '', region: 'Asia', incomeLevel: '' });
+    expect(normalizeCountryResponse([{}, [{ iso2Code: 'MA', name: 'Morocco', incomeLevel: { value: 'Lower middle income' } }]])).toMatchObject({ incomeLevel: 'Lower middle income', capitalCity: '', region: '' });
+    expect(normalizeCountryResponse([{}, [{ iso2Code: 'JP', name: 'Japan', capitalCity: 'Tokyo', incomeLevel: { value: 42 } }]])).toMatchObject({ incomeLevel: '' });
   });
   test('rejects malformed structures and missing useful fields', () => {
     expect(normalizeCountryResponse(null)).toBeNull();

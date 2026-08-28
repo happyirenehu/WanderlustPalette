@@ -7,7 +7,7 @@ function isFacts(value) {
   return value && typeof value === 'object'
     && typeof value.countryCode === 'string'
     && typeof value.countryName === 'string'
-    && (typeof value.capitalCity === 'string' || typeof value.region === 'string');
+    && (typeof value.capitalCity === 'string' || typeof value.region === 'string' || typeof value.incomeLevel === 'string');
 }
 
 export function parseCountryFactsCache(value) {

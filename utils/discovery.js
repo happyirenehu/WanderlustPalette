@@ -1,3 +1,5 @@
+import { normalizeBudget } from './budget';
+
 function cleanText(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -50,6 +52,8 @@ export function normalizeDestination(value) {
     name,
     country,
     countryCode: cleanText(value.countryCode).toUpperCase(),
+    travelRegion: cleanText(value.travelRegion),
+    budget: normalizeBudget(value.budget),
     vibeIds,
     colorIds: cleanStringList(value.colorIds),
     colorFamily: cleanText(value.colorFamily),

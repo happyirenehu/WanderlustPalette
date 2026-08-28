@@ -1,6 +1,6 @@
 const destinations = [
   {
-    id: 'santorini-greece', name: 'Santorini', country: 'Greece', countryCode: 'GR',
+    id: 'santorini-greece', name: 'Santorini', country: 'Greece', countryCode: 'GR', travelRegion: 'Southern Europe', budget: 'premium',
     vibeIds: ['calm', 'romantic'], colorIds: ['ocean-blue', 'dusty-rose'], colorFamily: 'Aegean blue and chalk white',
     imageUri: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff', imageAlt: 'White Santorini buildings above the Aegean Sea',
     imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com/photos/8VkA4JcS-3U',
@@ -9,7 +9,7 @@ const destinations = [
     whyItMatches: 'Its open horizon and restrained blue-white palette create a calm, intimate rhythm.',
   },
   {
-    id: 'milos-greece', name: 'Milos', country: 'Greece', countryCode: 'GR',
+    id: 'milos-greece', name: 'Milos', country: 'Greece', countryCode: 'GR', travelRegion: 'Southern Europe', budget: 'moderate',
     vibeIds: ['calm', 'dreamy'], colorIds: ['ocean-blue', 'lavender'], colorFamily: 'Mineral blue pastels',
     imageUri: 'https://images.unsplash.com/photo-1530841377377-3ff06c0ca713', imageAlt: 'Blue water and pale coastal rock in Greece',
     imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com',
@@ -18,7 +18,7 @@ const destinations = [
     whyItMatches: 'Soft mineral tones and sheltered water suit a slower, dreamlike escape.',
   },
   {
-    id: 'provence-france', name: 'Provence', country: 'France', countryCode: 'FR',
+    id: 'provence-france', name: 'Provence', country: 'France', countryCode: 'FR', travelRegion: 'Western Europe', budget: 'premium',
     vibeIds: ['dreamy', 'romantic'], colorIds: ['lavender', 'dusty-rose'], colorFamily: 'Lavender and limestone',
     imageUri: 'https://images.unsplash.com/photo-1499002238440-d264edd596ec', imageAlt: 'Lavender rows across a field in Provence',
     imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com',
@@ -27,7 +27,7 @@ const destinations = [
     whyItMatches: 'Layered lavender and warm stone make the landscape feel soft, nostalgic, and composed.',
   },
   {
-    id: 'lake-bled-slovenia', name: 'Lake Bled', country: 'Slovenia', countryCode: 'SI',
+    id: 'lake-bled-slovenia', name: 'Lake Bled', country: 'Slovenia', countryCode: 'SI', travelRegion: 'Central Europe', budget: 'moderate',
     vibeIds: ['dreamy', 'calm'], colorIds: ['lavender', 'forest-green', 'ocean-blue'], colorFamily: 'Mist blue and woodland green',
     imageUri: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470', imageAlt: 'A calm alpine lake surrounded by green mountains',
     imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com',
@@ -36,7 +36,7 @@ const destinations = [
     whyItMatches: 'Reflective water and softened greens give the place a gentle, suspended quality.',
   },
   {
-    id: 'marrakech-morocco', name: 'Marrakech', country: 'Morocco', countryCode: 'MA',
+    id: 'marrakech-morocco', name: 'Marrakech', country: 'Morocco', countryCode: 'MA', travelRegion: 'North Africa', budget: 'budget',
     vibeIds: ['warm', 'energetic'], colorIds: ['terracotta', 'citrus'], colorFamily: 'Ochre and saffron',
     imageUri: 'https://images.unsplash.com/photo-1597212618440-806262de4f6b', imageAlt: 'Warm terracotta architecture in Marrakech',
     imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com',
@@ -45,16 +45,16 @@ const destinations = [
     whyItMatches: 'Saturated earth colours and bustling public spaces carry warmth and creative energy.',
   },
   {
-    id: 'seville-spain', name: 'Seville', country: 'Spain', countryCode: 'ES',
+    id: 'seville-spain', name: 'Seville', country: 'Spain', countryCode: 'ES', travelRegion: 'Southern Europe', budget: 'moderate',
     vibeIds: ['warm', 'romantic'], colorIds: ['terracotta', 'citrus', 'dusty-rose'], colorFamily: 'Citrus and tiled terracotta',
-    imageUri: 'https://images.unsplash.com/photo-1559386484-97dfc0e15539', imageAlt: 'Ornate sunlit architecture in Seville',
-    imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com',
+    imageUri: 'https://images.unsplash.com/photo-1515443961218-a51367888e4b', imageAlt: 'The sweeping architecture of Plaza de España in Seville',
+    imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com/s/photos/plaza-de-espana-seville',
     palette: ['#A53F27', '#D97845', '#F0B65A', '#F6E0B8'],
     description: 'Orange trees, patterned courtyards, and late golden light give the city a generous visual warmth.',
     whyItMatches: 'Sunlit colour and intimate tiled spaces balance warmth with a romantic sense of occasion.',
   },
   {
-    id: 'tuscany-italy', name: 'Tuscany', country: 'Italy', countryCode: 'IT',
+    id: 'tuscany-italy', name: 'Tuscany', country: 'Italy', countryCode: 'IT', travelRegion: 'Southern Europe', budget: 'premium',
     vibeIds: ['warm', 'romantic'], colorIds: ['terracotta', 'forest-green', 'dusty-rose'], colorFamily: 'Amber earth and olive',
     imageUri: 'https://images.unsplash.com/photo-1470770841072-f978cf4d019e', imageAlt: 'Rolling green hills and a farmhouse in Tuscany',
     imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com',
@@ -63,7 +63,7 @@ const destinations = [
     whyItMatches: 'Amber soil and muted green offer an inviting, grounded kind of romance.',
   },
   {
-    id: 'madeira-portugal', name: 'Madeira', country: 'Portugal', countryCode: 'PT',
+    id: 'madeira-portugal', name: 'Madeira', country: 'Portugal', countryCode: 'PT', travelRegion: 'Atlantic Europe', budget: 'moderate',
     vibeIds: ['wild', 'energetic'], colorIds: ['forest-green', 'ocean-blue'], colorFamily: 'Laurel green and volcanic blue',
     imageUri: 'https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5', imageAlt: 'Steep green mountains beneath moving cloud',
     imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com',
@@ -72,7 +72,7 @@ const destinations = [
     whyItMatches: 'Dense greens and sharp coastal contrasts reward movement and a taste for elemental terrain.',
   },
   {
-    id: 'azores-portugal', name: 'The Azores', country: 'Portugal', countryCode: 'PT',
+    id: 'azores-portugal', name: 'The Azores', country: 'Portugal', countryCode: 'PT', travelRegion: 'Atlantic Europe', budget: 'moderate',
     vibeIds: ['wild', 'calm'], colorIds: ['forest-green', 'ocean-blue'], colorFamily: 'Crater green and Atlantic blue',
     imageUri: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee', imageAlt: 'A green volcanic landscape under open sky',
     imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com',
@@ -81,7 +81,7 @@ const destinations = [
     whyItMatches: 'The landscape pairs wild volcanic form with quiet water and expansive green.',
   },
   {
-    id: 'lofoten-norway', name: 'Lofoten', country: 'Norway', countryCode: 'NO',
+    id: 'lofoten-norway', name: 'Lofoten', country: 'Norway', countryCode: 'NO', travelRegion: 'Northern Europe', budget: 'premium',
     vibeIds: ['wild', 'dreamy'], colorIds: ['ocean-blue', 'forest-green'], colorFamily: 'Arctic blue and cabin red',
     imageUri: 'https://images.unsplash.com/photo-1519681393784-d120267933ba', imageAlt: 'Snowy Lofoten mountains beside Arctic water',
     imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com',
@@ -90,7 +90,7 @@ const destinations = [
     whyItMatches: 'Dramatic natural scale meets quiet, colour-rich settlements at the edge of the Arctic.',
   },
   {
-    id: 'kyoto-japan', name: 'Kyoto', country: 'Japan', countryCode: 'JP',
+    id: 'kyoto-japan', name: 'Kyoto', country: 'Japan', countryCode: 'JP', travelRegion: 'East Asia', budget: 'moderate',
     vibeIds: ['romantic', 'calm'], colorIds: ['dusty-rose', 'forest-green'], colorFamily: 'Maple red and moss green',
     imageUri: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e', imageAlt: 'Traditional Kyoto street beneath warm evening light',
     imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com',
@@ -99,7 +99,7 @@ const destinations = [
     whyItMatches: 'Layered craft, garden calm, and changing colour create an intimate sense of place.',
   },
   {
-    id: 'queenstown-new-zealand', name: 'Queenstown', country: 'New Zealand', countryCode: 'NZ',
+    id: 'queenstown-new-zealand', name: 'Queenstown', country: 'New Zealand', countryCode: 'NZ', travelRegion: 'South Pacific', budget: 'premium',
     vibeIds: ['energetic', 'wild'], colorIds: ['ocean-blue', 'forest-green', 'citrus'], colorFamily: 'Alpine blue and golden grass',
     imageUri: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b', imageAlt: 'A dramatic alpine mountain landscape near Queenstown',
     imageCredit: 'Photo via Unsplash', imageAttributionUrl: 'https://unsplash.com',

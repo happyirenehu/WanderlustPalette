@@ -31,9 +31,9 @@ const colors = [
   },
   {
     id: 'citrus',
-    name: 'Citrus',
-    palette: ['#D94F1E', '#F28C28', '#F2C94C', '#FFF0A6'],
-    description: 'Bright streets, lively markets, and sunlit momentum.',
+    name: 'Golden',
+    palette: ['#B78100', '#E0AC16', '#F5D547', '#FFF4A3'],
+    description: 'Luminous yellow, bright energy, and the warmth of sunlight.',
   },
 ];
 

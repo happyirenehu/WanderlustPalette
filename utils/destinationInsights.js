@@ -1,4 +1,5 @@
 import { normalizeDestinations } from './discovery';
+import { BUDGET_LEVELS, normalizeBudget } from './budget';
 
 function cleanIds(value) {
   if (!Array.isArray(value)) return [];
@@ -22,10 +23,19 @@ function mostFrequent(ids, canonicalItems) {
 export function getDreamPaletteInsights(savedIds, catalogue, vibes, colors) {
   const byId = new Map(normalizeDestinations(catalogue).map((destination) => [destination.id, destination]));
   const saved = cleanIds(savedIds).map((id) => byId.get(id)).filter(Boolean);
+  const budgetDistribution = BUDGET_LEVELS.map((level) => ({
+    ...level,
+    count: saved.filter((item) => normalizeBudget(item.budget) === level.id).length,
+  }));
+  const dominantBudget = budgetDistribution.reduce((winner, item) => (
+    item.count > (winner?.count || 0) ? item : winner
+  ), null);
   return {
     total: saved.length,
     dominantVibe: mostFrequent(saved.flatMap((item) => item.vibeIds), vibes),
     dominantColor: mostFrequent(saved.flatMap((item) => item.colorIds), colors),
+    dominantBudget: dominantBudget?.count ? dominantBudget : null,
+    budgetDistribution,
   };
 }
 

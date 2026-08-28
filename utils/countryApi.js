@@ -11,8 +11,9 @@ export function normalizeCountryResponse(value) {
   const countryName = cleanText(record.name);
   const capitalCity = cleanText(record.capitalCity);
   const region = cleanText(record.region?.value);
-  if (!countryCode || !countryName || (!capitalCity && !region)) return null;
-  return { countryCode, countryName, capitalCity, region };
+  const incomeLevel = cleanText(record.incomeLevel?.value);
+  if (!countryCode || !countryName || (!capitalCity && !region && !incomeLevel)) return null;
+  return { countryCode, countryName, capitalCity, region, incomeLevel };
 }
 
 export async function fetchCountryFacts(countryCode, options = {}) {
