@@ -75,6 +75,25 @@ describe('journey validation and normalization', () => {
     ])).toHaveLength(1);
   });
 
+  test('keeps legacy and remote journeys valid while normalizing personal-photo metadata safely', () => {
+    expect(normalizeJourney(BASE_JOURNEY)).toMatchObject({ imageSource: '', imageUri: '' });
+    expect(normalizeJourney({
+      ...BASE_JOURNEY,
+      imageSource: 'personal',
+      imageUri: 'file:///documents/wanderlust-palette/journey-photos/trip.jpg',
+    })).toMatchObject({ imageSource: 'personal' });
+    expect(normalizeJourney({
+      ...BASE_JOURNEY,
+      imageSource: 'personal',
+      imageUri: 'https://example.com/not-owned.jpg',
+    })).toMatchObject({ imageSource: '' });
+    expect(normalizeJourney({
+      ...BASE_JOURNEY,
+      imageSource: 'unexpected',
+      imageUri: 'file:///external/photo.jpg',
+    })).toMatchObject({ imageSource: '' });
+  });
+
   test('creates deterministic local IDs when time and randomness are supplied', () => {
     expect(createLocalJourneyId(1000, 0)).toBe('journey-rs-0');
     expect(createLocalJourneyId(1000, 0)).toBe('journey-rs-0');
@@ -121,6 +140,29 @@ describe('journey CRUD transformations', () => {
       imageUri: 'https://example.com/image.jpg',
       palette: ['#ABCDEF'],
       updatedAt: '2026-02-01T00:00:00.000Z',
+    });
+  });
+
+  test('preserves or explicitly replaces personal-photo fields during edit', () => {
+    const withPhoto = {
+      ...BASE_JOURNEY,
+      imageSource: 'personal',
+      imageUri: 'file:///documents/wanderlust-palette/journey-photos/old.jpg',
+    };
+    const preserved = updateJourney([withPhoto], BASE_JOURNEY.id, {
+      destination: 'Kyoto', country: 'Japan', date: '2025-04-13', notes: 'Updated',
+    });
+    expect(preserved.journey).toMatchObject({
+      imageSource: 'personal', imageUri: withPhoto.imageUri,
+    });
+
+    const replaced = updateJourney([withPhoto], BASE_JOURNEY.id, {
+      destination: 'Kyoto', country: 'Japan', date: '2025-04-13', notes: 'Updated',
+      imageSource: 'personal',
+      imageUri: 'file:///documents/wanderlust-palette/journey-photos/new.jpg',
+    });
+    expect(replaced.journey).toMatchObject({
+      imageSource: 'personal', imageUri: 'file:///documents/wanderlust-palette/journey-photos/new.jpg',
     });
   });
 

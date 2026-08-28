@@ -14,6 +14,10 @@ function normalizeExpenses(value) {
   return Array.isArray(value) ? value.filter((expense) => expense && typeof expense === 'object') : [];
 }
 
+function normalizeImageSource(value, imageUri) {
+  return value === 'personal' && imageUri.startsWith('file://') ? 'personal' : '';
+}
+
 function splitLegacyLocation(location) {
   const [destination = EMPTY_TEXT, ...countryParts] = cleanText(location).split(',');
   return {
@@ -51,6 +55,7 @@ export function normalizeJourney(value, fallbackId = EMPTY_TEXT) {
 
   const createdAt = cleanText(value.createdAt) || `${date}T00:00:00.000Z`;
   const updatedAt = cleanText(value.updatedAt) || createdAt;
+  const imageUri = cleanText(value.imageUri);
 
   return {
     id,
@@ -58,7 +63,8 @@ export function normalizeJourney(value, fallbackId = EMPTY_TEXT) {
     country,
     date,
     notes: cleanText(value.notes) || cleanText(value.description),
-    imageUri: cleanText(value.imageUri),
+    imageUri,
+    imageSource: normalizeImageSource(value.imageSource, imageUri),
     palette: normalizePalette(value.palette),
     totalCost: Number.isFinite(value.totalCost) ? value.totalCost : null,
     expenses: normalizeExpenses(value.expenses),
@@ -101,6 +107,8 @@ export function addJourney(journeys, input, options = {}) {
   const journey = normalizeJourney({
     ...validation.values,
     id,
+    imageSource: input.imageSource,
+    imageUri: input.imageUri,
     createdAt: timestamp,
     updatedAt: timestamp,
   });
@@ -118,11 +126,13 @@ export function updateJourney(journeys, id, input, timestamp = new Date().toISOS
     return { journeys: currentJourneys, journey: null, errors: validation.errors, found: true };
   }
 
-  const journey = {
+  const hasPhotoUpdate = Object.prototype.hasOwnProperty.call(input, 'imageUri');
+  const journey = normalizeJourney({
     ...currentJourneys[targetIndex],
     ...validation.values,
+    ...(hasPhotoUpdate ? { imageSource: input.imageSource, imageUri: input.imageUri } : {}),
     updatedAt: timestamp,
-  };
+  });
   const nextJourneys = currentJourneys.slice();
   nextJourneys[targetIndex] = journey;
 

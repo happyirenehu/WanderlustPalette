@@ -14,4 +14,11 @@ describe('display image URL optimization', () => {
     expect(getDisplayImageUri(null)).toBe('');
     expect(getDisplayImageUri('not a url')).toBe('not a url');
   });
+  test.each([
+    'file:///documents/wanderlust-palette/journey-photos/trip.jpg',
+    'content://photos/1',
+    'ph://photos/1',
+  ])('does not apply remote optimization to local URI %s', (uri) => {
+    expect(getDisplayImageUri(uri)).toBe(uri);
+  });
 });

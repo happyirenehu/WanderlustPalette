@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -17,9 +18,11 @@ import SignatureScreen from './SignatureScreen.js';
 import getContrastColor from '../utils/accessibility.js';
 import { addFavouriteId, isFavouriteId, removeFavouriteId } from '../utils/dreamPalette.js';
 import { loadFavouriteIds, saveFavouriteIds } from '../utils/dreamPaletteStorage.js';
-import { addJourney, deleteJourney, normalizeJourneys, updateJourney } from '../utils/journeys.js';
+import { addJourney, createLocalJourneyId, deleteJourney, normalizeJourneys, updateJourney } from '../utils/journeys.js';
 import { loadJourneys, saveJourneys } from '../utils/journeyStorage.js';
 import getDisplayImageUri from '../utils/imageSources.js';
+import { cleanupOwnedJourneyPhoto, copyPersonalJourneyPhoto } from '../utils/journeyPhotoStorage.js';
+import normalizePhotoPickerResult from '../utils/photoPicker.js';
 
 const ACTIVE_THEME_KEY = '@wanderlust_palette/active_theme';
 const DEFAULT_THEME = mockData[0]?.palette[0] || '#F7FAFC';
@@ -35,6 +38,9 @@ export default function HomeScreen() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
+  const [pendingPhoto, setPendingPhoto] = useState(null);
+  const [photoFeedback, setPhotoFeedback] = useState('');
+  const [failedImageUris, setFailedImageUris] = useState(() => new Set());
   const [storageError, setStorageError] = useState('');
   const [section, setSection] = useState('discover');
   const [favouriteIds, setFavouriteIds] = useState([]);
@@ -85,9 +91,10 @@ export default function HomeScreen() {
   };
 
   const persistJourneys = async (nextJourneys) => {
-    setJourneys(nextJourneys);
     const result = await saveJourneys(nextJourneys);
     setStorageError(result.error || '');
+    if (result.ok) setJourneys(nextJourneys);
+    return result;
   };
 
   const toggleFavourite = async (destinationId) => {
@@ -116,6 +123,8 @@ export default function HomeScreen() {
     setEditingId(null);
     setForm(EMPTY_FORM);
     setFormErrors({});
+    setPendingPhoto(null);
+    setPhotoFeedback('');
     setScreen('form');
   };
 
@@ -128,13 +137,44 @@ export default function HomeScreen() {
       notes: journey.notes,
     });
     setFormErrors({});
+    setPendingPhoto(null);
+    setPhotoFeedback('');
     setScreen('form');
   };
 
+  const choosePersonalPhoto = async () => {
+    setPhotoFeedback('');
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        setPhotoFeedback('Photo access was not granted. You can continue without changing the photo.');
+        return;
+      }
+
+      const pickerResult = normalizePhotoPickerResult(await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: false,
+        allowsMultipleSelection: false,
+        mediaTypes: ['images'],
+        quality: 1,
+        selectionLimit: 1,
+      }));
+      if (pickerResult.status === 'cancelled') return;
+      if (pickerResult.status !== 'selected') {
+        setPhotoFeedback('That photo could not be selected. Please try another image.');
+        return;
+      }
+      setPendingPhoto(pickerResult.asset);
+    } catch (error) {
+      setPhotoFeedback('Photos are unavailable right now. You can continue editing your journey.');
+    }
+  };
+
   const submitForm = async () => {
-    const result = editingId
+    const newJourneyId = editingId || createLocalJourneyId();
+    let durablePhoto = null;
+    let result = editingId
       ? updateJourney(journeys, editingId, form)
-      : addJourney(journeys, form);
+      : addJourney(journeys, form, { id: newJourneyId });
 
     if (Object.keys(result.errors).length > 0) {
       setFormErrors(result.errors);
@@ -145,11 +185,44 @@ export default function HomeScreen() {
       setFormErrors({ form: 'This journey is no longer available.' });
       return;
     }
+    const targetJourneyId = result.journey.id;
 
-    await persistJourneys(result.journeys);
+    if (pendingPhoto) {
+      durablePhoto = await copyPersonalJourneyPhoto(pendingPhoto, targetJourneyId);
+      if (!durablePhoto.ok) {
+        setFormErrors({ form: durablePhoto.error });
+        return;
+      }
+      const inputWithPhoto = {
+        ...form,
+        imageSource: durablePhoto.imageSource,
+        imageUri: durablePhoto.imageUri,
+      };
+      result = editingId
+        ? updateJourney(journeys, editingId, inputWithPhoto)
+        : addJourney(journeys, inputWithPhoto, { id: targetJourneyId });
+    }
+
+    const previousJourney = editingId ? journeys.find((journey) => journey.id === editingId) : null;
+    const persistence = await persistJourneys(result.journeys);
+    if (!persistence.ok) {
+      if (durablePhoto?.ok) await cleanupOwnedJourneyPhoto(durablePhoto);
+      setFormErrors({ form: persistence.error });
+      return;
+    }
+    if (durablePhoto?.ok && previousJourney) await cleanupOwnedJourneyPhoto(previousJourney);
+    if (durablePhoto?.imageUri) {
+      setFailedImageUris((current) => {
+        const next = new Set(current);
+        next.delete(durablePhoto.imageUri);
+        return next;
+      });
+    }
     setSelectedId(result.journey.id);
     setEditingId(null);
     setFormErrors({});
+    setPendingPhoto(null);
+    setPhotoFeedback('');
     setScreen('detail');
   };
 
@@ -176,6 +249,24 @@ export default function HomeScreen() {
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
     setFormErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
+  };
+
+  const renderJourneyImage = (imageUri, imageStyle) => {
+    if (!imageUri) return null;
+    if (failedImageUris.has(imageUri)) {
+      return (
+        <View style={[imageStyle, styles.imageFallback]}>
+          <Text style={styles.imageFallbackText}>Photo unavailable</Text>
+        </View>
+      );
+    }
+    return (
+      <Image
+        onError={() => setFailedImageUris((current) => new Set(current).add(imageUri))}
+        source={{ uri: getDisplayImageUri(imageUri) }}
+        style={imageStyle}
+      />
+    );
   };
 
   const renderPalette = (journey) => {
@@ -226,7 +317,7 @@ export default function HomeScreen() {
           onPress={() => openDetail(journey)}
           style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
         >
-          {journey.imageUri ? <Image source={{ uri: getDisplayImageUri(journey.imageUri) }} style={styles.image} /> : null}
+          {renderJourneyImage(journey.imageUri, styles.image)}
           <View style={styles.cardBody}>
             <Text style={styles.cardDate}>{journey.date}</Text>
             <Text style={styles.location}>{journey.destination}</Text>
@@ -258,7 +349,7 @@ export default function HomeScreen() {
           <Text style={styles.backButtonText}>← My Journeys</Text>
         </Pressable>
         <View style={styles.detailCard}>
-          {selectedJourney.imageUri ? <Image source={{ uri: getDisplayImageUri(selectedJourney.imageUri) }} style={styles.detailImage} /> : null}
+          {renderJourneyImage(selectedJourney.imageUri, styles.detailImage)}
           <Text style={styles.cardDate}>{selectedJourney.date}</Text>
           <Text style={styles.detailTitle}>{selectedJourney.destination}</Text>
           <Text style={styles.detailCountry}>{selectedJourney.country}</Text>
@@ -304,6 +395,18 @@ export default function HomeScreen() {
         {renderField('country', 'Country *', { placeholder: 'Japan' })}
         {renderField('date', 'Date *', { placeholder: 'YYYY-MM-DD' })}
         {renderField('notes', 'Notes', { multiline: true, placeholder: 'What made this journey memorable?' })}
+        <View style={styles.photoField}>
+          <Text style={styles.label}>Personal photo</Text>
+          {pendingPhoto?.uri
+            ? <Image source={{ uri: pendingPhoto.uri }} style={styles.photoPreview} />
+            : editingId && selectedJourney?.imageUri
+              ? renderJourneyImage(selectedJourney.imageUri, styles.photoPreview)
+              : <View style={[styles.photoPreview, styles.imageFallback]}><Text style={styles.imageFallbackText}>No photo selected</Text></View>}
+          <Pressable accessibilityRole="button" onPress={choosePersonalPhoto} style={styles.secondaryButtonWide}>
+            <Text style={styles.secondaryButtonText}>{editingId && selectedJourney?.imageSource === 'personal' ? 'Replace Personal Photo' : 'Choose Personal Photo'}</Text>
+          </Pressable>
+          {photoFeedback ? <Text accessibilityRole="alert" style={styles.photoFeedback}>{photoFeedback}</Text> : null}
+        </View>
         {formErrors.form ? <Text style={styles.errorText}>{formErrors.form}</Text> : null}
         <Pressable onPress={submitForm} style={styles.primaryButtonWide}>
           <Text style={styles.primaryButtonText}>{editingId ? 'Save changes' : 'Save journey'}</Text>
@@ -395,6 +498,8 @@ const styles = StyleSheet.create({
   card: { backgroundColor: '#FFFFFF', borderRadius: 8, elevation: 4, marginBottom: 24, overflow: 'hidden', shadowColor: '#000000', shadowOffset: { height: 5, width: 0 }, shadowOpacity: 0.16, shadowRadius: 12 },
   cardPressed: { opacity: 0.88 },
   image: { aspectRatio: 1.55, backgroundColor: '#CBD5E0', width: '100%' },
+  imageFallback: { alignItems: 'center', backgroundColor: '#E8EEF2', justifyContent: 'center' },
+  imageFallbackText: { color: '#667085', fontSize: 13, fontWeight: '700' },
   cardBody: { padding: 18 },
   cardDate: { color: '#667085', fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' },
   location: { color: '#17202A', fontSize: 28, fontWeight: '800', marginTop: 6 },
@@ -424,6 +529,10 @@ const styles = StyleSheet.create({
   label: { color: '#344054', fontSize: 14, fontWeight: '700', marginBottom: 7 },
   input: { backgroundColor: '#FFFFFF', borderColor: '#CBD5E0', borderRadius: 8, borderWidth: 1, color: '#17202A', fontSize: 16, paddingHorizontal: 12, paddingVertical: 11 },
   notesInput: { minHeight: 110, textAlignVertical: 'top' },
+  photoField: { marginBottom: 18 },
+  photoPreview: { aspectRatio: 1.55, backgroundColor: '#E8EEF2', borderRadius: 8, marginBottom: 10, width: '100%' },
+  photoFeedback: { color: '#667085', fontSize: 13, lineHeight: 18, marginTop: 8 },
+  secondaryButtonWide: { alignItems: 'center', backgroundColor: '#E8EEF2', borderRadius: 8, padding: 13 },
   inputError: { borderColor: '#C62828' },
   errorText: { color: '#B42318', fontSize: 13, marginTop: 5 },
   errorBanner: { alignItems: 'center', backgroundColor: '#FFF3CD', borderRadius: 8, flexDirection: 'row', gap: 12, justifyContent: 'space-between', marginBottom: 16, padding: 12 },
