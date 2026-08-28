@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import DestinationImage from '../components/DestinationImage.js';
+import VibeCard from '../components/VibeCard.js';
 import colorsData from '../data/colors.js';
 import destinationsData from '../data/destinations.js';
 import vibesData from '../data/vibes.js';
@@ -13,7 +14,7 @@ import { isFavouriteId } from '../utils/dreamPalette.js';
 
 const FALLBACK_COLOR = '#E8EEF2';
 
-export default function SignatureScreen({ mode, favouriteIds, onSelectTheme, onToggleFavourite }) {
+export default function SignatureScreen({ mode, favouriteIds, onDestinationChange, onSelectTheme, onToggleFavourite }) {
   const vibes = useMemo(() => normalizeVibes(vibesData), []);
   const destinations = useMemo(() => normalizeDestinations(destinationsData), []);
   const [discoveryMode, setDiscoveryMode] = useState('vibe');
@@ -32,6 +33,10 @@ export default function SignatureScreen({ mode, favouriteIds, onSelectTheme, onT
     : recommendDestinations(selectedVibeId, destinations, vibes);
 
   useEffect(() => setSelectedDestinationId(null), [mode]);
+
+  useEffect(() => {
+    if (selectedDestinationId) onDestinationChange?.();
+  }, [onDestinationChange, selectedDestinationId]);
 
   useEffect(() => {
     const code = selectedDestination?.countryCode;
@@ -117,7 +122,23 @@ export default function SignatureScreen({ mode, favouriteIds, onSelectTheme, onT
     <>
       <View style={styles.intro}><Text style={styles.eyebrow}>FEEL → COLOUR → PLACE</Text><Text style={styles.pageTitle}>{discoveryMode === 'vibe' ? 'How do you want to feel?' : 'Where will colour take you?'}</Text><Text style={styles.pageSubtitle}>Choose a feeling or colour story to reveal locally curated destinations.</Text></View>
       <View accessibilityLabel="Discovery method" accessibilityRole="tablist" style={styles.modeSwitch}>{[['vibe', 'By Vibe'], ['color', 'By Colour']].map(([id, label]) => { const selected = discoveryMode === id; return <Pressable accessibilityRole="tab" accessibilityState={{ selected }} key={id} onPress={() => setDiscoveryMode(id)} style={[styles.modeButton, selected && styles.modeButtonSelected]}><Text style={[styles.modeText, selected && styles.modeTextSelected]}>{label}{selected ? ' ✓' : ''}</Text></Pressable>; })}</View>
-      <View accessibilityLabel={discoveryMode === 'vibe' ? 'Travel vibe choices' : 'Travel colour choices'} style={styles.choiceGrid}>{(discoveryMode === 'vibe' ? vibes : colorsData).map((item) => { const selected = discoveryMode === 'vibe' ? item.id === selectedVibeId : item.id === selectedColorId; return <Pressable accessibilityLabel={`${item.name} ${discoveryMode}${selected ? ', selected' : ''}`} accessibilityRole="button" accessibilityState={{ selected }} key={item.id} onPress={() => discoveryMode === 'vibe' ? setSelectedVibeId(item.id) : setSelectedColorId(item.id)} style={[styles.choiceButton, selected && styles.choiceButtonSelected]}><View style={[styles.choiceDot, { backgroundColor: item.palette?.[0] || FALLBACK_COLOR }]} /><Text style={styles.choiceName}>{item.name}</Text><Text style={styles.choiceAction}>{selected ? 'Selected ✓' : 'Choose'}</Text></Pressable>; })}</View>
+      {discoveryMode === 'vibe' ? (
+        <View accessibilityLabel="Travel vibe choices" style={styles.vibeCardGrid}>
+          {vibes.map((vibe) => <VibeCard key={vibe.id} onPress={() => setSelectedVibeId(vibe.id)} selected={vibe.id === selectedVibeId} vibe={vibe} />)}
+        </View>
+      ) : (
+        <View accessibilityLabel="Travel colour choices" style={styles.colorChoiceGrid}>
+          {colorsData.map((color) => {
+            const selected = color.id === selectedColorId;
+            return (
+              <Pressable accessibilityLabel={`${color.name} colour story. ${color.description}${selected ? ' Selected.' : ''}`} accessibilityRole="button" accessibilityState={{ selected }} key={color.id} onPress={() => setSelectedColorId(color.id)} style={[styles.colorChoice, selected && styles.colorChoiceSelected]}>
+                <View accessibilityLabel={`${color.name} palette`} style={styles.colorPreview}>{color.palette.map((value) => <View key={value} style={[styles.colorBar, { backgroundColor: value }]} />)}</View>
+                <Text style={styles.colorName}>{color.name}</Text><Text style={styles.colorDescription}>{color.description}</Text><Text style={styles.colorAction}>{selected ? 'Selected ✓' : 'Explore this colour'}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
       {!selectedIdentity ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>Begin with {discoveryMode === 'vibe' ? 'a feeling' : 'a colour'}</Text><Text style={styles.emptyCopy}>Six curated {discoveryMode === 'vibe' ? 'vibes' : 'colour stories'} are ready when you are.</Text></View> : <><View style={[styles.identityCard, { backgroundColor: selectedIdentity.palette?.[2] || '#F4F0E8' }]}><Text style={styles.eyebrow}>{discoveryMode === 'vibe' ? selectedIdentity.colorFamily : 'CURATED COLOUR STORY'}</Text><Text style={styles.identityTitle}>{selectedIdentity.name}</Text><Text style={styles.identityDescription}>{selectedIdentity.description}</Text>{renderPalette(selectedIdentity.palette || [], selectedIdentity.name)}</View><Text style={styles.resultsTitle}>{discoveryMode === 'vibe' ? 'Places with this feeling' : 'Places in this colour story'}</Text>{recommendations.length ? recommendations.map((item) => renderDestinationCard(item)) : <View style={styles.emptyCard}><Text style={styles.emptyTitle}>No matching places yet</Text></View>}</>}
     </>
   );
@@ -126,7 +147,8 @@ export default function SignatureScreen({ mode, favouriteIds, onSelectTheme, onT
 const styles = StyleSheet.create({
   intro: { marginBottom: 20, paddingTop: 8 }, eyebrow: { color: '#667085', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }, pageTitle: { color: '#17202A', fontSize: 36, fontWeight: '800', lineHeight: 42, marginTop: 8 }, pageSubtitle: { color: '#4B5563', fontSize: 15, lineHeight: 22, marginTop: 8 },
   modeSwitch: { backgroundColor: '#FFFFFF', borderRadius: 9, flexDirection: 'row', marginBottom: 18, padding: 4 }, modeButton: { alignItems: 'center', borderRadius: 7, flex: 1, padding: 11 }, modeButtonSelected: { backgroundColor: '#17202A' }, modeText: { color: '#667085', fontSize: 13, fontWeight: '800' }, modeTextSelected: { color: '#FFFFFF' },
-  choiceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 22 }, choiceButton: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#D0D5DD', borderRadius: 8, borderWidth: 1, minWidth: '30%', padding: 12 }, choiceButtonSelected: { borderColor: '#17202A', borderWidth: 2, padding: 11 }, choiceDot: { borderRadius: 16, height: 28, marginBottom: 7, width: 28 }, choiceName: { color: '#17202A', fontSize: 13, fontWeight: '800', textAlign: 'center' }, choiceAction: { color: '#667085', fontSize: 10, marginTop: 3 },
+  vibeCardGrid: { gap: 14, marginBottom: 22 },
+  colorChoiceGrid: { gap: 12, marginBottom: 22 }, colorChoice: { backgroundColor: '#FFFFFF', borderColor: '#D0D5DD', borderRadius: 10, borderWidth: 1, overflow: 'hidden', padding: 16 }, colorChoiceSelected: { borderColor: '#17202A', borderWidth: 3, padding: 14 }, colorPreview: { borderRadius: 6, flexDirection: 'row', height: 48, overflow: 'hidden' }, colorBar: { flex: 1 }, colorName: { color: '#17202A', fontSize: 21, fontWeight: '900', marginTop: 13 }, colorDescription: { color: '#4B5563', fontSize: 13, lineHeight: 19, marginTop: 4 }, colorAction: { color: '#667085', fontSize: 11, fontWeight: '800', marginTop: 10 },
   identityCard: { borderRadius: 10, marginBottom: 24, padding: 20 }, identityTitle: { color: '#17202A', fontSize: 30, fontWeight: '800', marginTop: 5 }, identityDescription: { color: '#344054', fontSize: 14, lineHeight: 21, marginTop: 7 }, resultsTitle: { color: '#17202A', fontSize: 22, fontWeight: '800', marginBottom: 14 },
   destinationCard: { backgroundColor: '#FFFFFF', borderRadius: 10, elevation: 3, marginBottom: 20, overflow: 'hidden', shadowColor: '#000000', shadowOffset: { height: 4, width: 0 }, shadowOpacity: 0.12, shadowRadius: 10 }, compactCard: { marginBottom: 14 }, pressedCard: { opacity: 0.88 }, destinationBody: { padding: 18 }, destinationHeading: { alignItems: 'flex-start', flexDirection: 'row', gap: 10, justifyContent: 'space-between' }, destinationCopy: { flex: 1 }, destinationName: { color: '#17202A', fontSize: 28, fontWeight: '800', marginTop: 5 }, compactName: { fontSize: 22 }, destinationCountry: { color: '#667085', fontSize: 14, fontWeight: '600', marginTop: 1 }, destinationDescription: { color: '#4B5563', fontSize: 14, lineHeight: 21, marginTop: 12 }, savedBadge: { backgroundColor: '#E8F1EC', borderRadius: 5, color: '#28533C', fontSize: 10, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 5 },
   paletteRow: { flexDirection: 'row', gap: 8, marginTop: 16 }, swatch: { borderColor: '#FFFFFF', borderRadius: 5, borderWidth: 2, flex: 1, height: 34 }, emptyCard: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 10, padding: 28 }, emptyTitle: { color: '#17202A', fontSize: 22, fontWeight: '800', textAlign: 'center' }, emptyCopy: { color: '#667085', fontSize: 14, lineHeight: 21, marginTop: 8, textAlign: 'center' },

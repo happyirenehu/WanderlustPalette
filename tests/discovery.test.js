@@ -21,6 +21,15 @@ describe('vibe and destination data safety', () => {
   test('normalizes a vibe with a missing palette', () => {
     expect(normalizeVibe({ id: 'quiet', name: 'Quiet' })).toEqual({
       id: 'quiet', name: 'Quiet', colorId: '', description: '', colorFamily: '', palette: [],
+      imageUri: '', imageAlt: '', imageCredit: '', imageAttributionUrl: '',
+    });
+  });
+
+  test('provides optimized, attributable vibe imagery with fallback-safe metadata', () => {
+    expect(vibes.every((vibe) => vibe.imageUri.startsWith('https://images.unsplash.com/'))).toBe(true);
+    expect(vibes.every((vibe) => vibe.imageAlt && vibe.imageCredit && vibe.imageAttributionUrl)).toBe(true);
+    expect(normalizeVibe({ id: 'offline', name: 'Offline', imageUri: null })).toMatchObject({
+      imageUri: '', imageAlt: '', imageCredit: '', imageAttributionUrl: '',
     });
   });
 

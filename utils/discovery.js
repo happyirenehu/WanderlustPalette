@@ -19,6 +19,10 @@ export function normalizeVibe(value) {
     description: cleanText(value.description),
     colorFamily: cleanText(value.colorFamily),
     palette: cleanStringList(value.palette),
+    imageUri: cleanText(value.imageUri),
+    imageAlt: cleanText(value.imageAlt),
+    imageCredit: cleanText(value.imageCredit),
+    imageAttributionUrl: cleanText(value.imageAttributionUrl),
   };
 }
 

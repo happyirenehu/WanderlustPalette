@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -25,6 +25,7 @@ const DEFAULT_THEME = mockData[0]?.palette[0] || '#F7FAFC';
 const EMPTY_FORM = { destination: '', country: '', date: '', notes: '' };
 
 export default function HomeScreen() {
+  const scrollViewRef = useRef(null);
   const sampleJourneys = useMemo(() => normalizeJourneys(mockData), []);
   const [journeys, setJourneys] = useState(sampleJourneys);
   const [activeTheme, setActiveTheme] = useState(DEFAULT_THEME);
@@ -64,6 +65,9 @@ export default function HomeScreen() {
 
   const selectedJourney = journeys.find((journey) => journey.id === selectedId) || null;
   const textColor = getContrastColor(activeTheme);
+  const resetScrollPosition = useCallback(() => {
+    scrollViewRef.current?.scrollTo({ animated: false, y: 0 });
+  }, []);
 
   const selectTheme = async (color) => {
     if (!color) return;
@@ -308,6 +312,7 @@ export default function HomeScreen() {
     <ScrollView
       contentContainerStyle={[styles.content, { backgroundColor: activeTheme }]}
       keyboardShouldPersistTaps="handled"
+      ref={scrollViewRef}
       style={[styles.screen, { backgroundColor: activeTheme }]}
     >
       <View accessibilityLabel="Main sections" accessibilityRole="tablist" style={styles.sectionNav}>
@@ -351,6 +356,7 @@ export default function HomeScreen() {
         <SignatureScreen
           favouriteIds={favouriteIds}
           mode={section}
+          onDestinationChange={resetScrollPosition}
           onSelectTheme={selectTheme}
           onToggleFavourite={toggleFavourite}
         />
