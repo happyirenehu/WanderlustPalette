@@ -135,6 +135,7 @@ const en = {
     saveChanges: 'Save changes',
     saveJourney: 'Save journey',
     themeA11y: 'Set theme to {color}',
+    paletteColourA11y: 'Journey palette colour {color}',
   },
   photo: {
     field: 'Personal photo',
@@ -147,6 +148,15 @@ const en = {
     permissionDenied: 'Photo access was not granted. You can continue without changing the photo.',
     invalidSelection: 'That photo could not be selected. Please try another image.',
     unavailableFeedback: 'Photos are unavailable right now. You can continue editing your journey.',
+    saveFailed: 'That photo could not be prepared safely. Your Journey can still be saved without replacing the photo.',
+    coloursExtracting: 'Finding colours from your photo…',
+    coloursUnavailable: 'Colours could not be extracted. You can keep or edit the Journey palette manually.',
+    coloursFromPhoto: 'Colours from your photo',
+    useColours: 'Use these colours',
+    paletteField: 'Journey palette',
+    paletteHelp: 'Enter up to three colours as #RRGGBB. Existing additional palette colours are preserved.',
+    paletteColour: 'Journey palette colour {number}',
+    invalidPalette: 'Use valid hexadecimal colours such as #1A2B3C.',
   },
   images: {
     travelPhoto: '{name} travel photograph',

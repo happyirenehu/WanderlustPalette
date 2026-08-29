@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import mockData from '../assets/mockData.json';
 import SignatureScreen from './SignatureScreen.js';
+import PhotoPaletteExtractor from '../components/PhotoPaletteExtractor.js';
 import { useLanguage } from '../context/LanguageContext.js';
 import getContrastColor from '../utils/accessibility.js';
 import { addFavouriteId, isFavouriteId, removeFavouriteId } from '../utils/dreamPalette.js';
@@ -25,6 +26,11 @@ import getDisplayImageUri from '../utils/imageSources.js';
 import { cleanupOwnedJourneyPhoto, copyPersonalJourneyPhoto } from '../utils/journeyPhotoStorage.js';
 import normalizePhotoPickerResult from '../utils/photoPicker.js';
 import getExpenseInsights from '../utils/expenseInsights.js';
+import {
+  normalizePhotoPaletteSuggestion,
+  resolvePhotoPalette,
+  validateJourneyPalette,
+} from '../utils/journeyPaletteSuggestion.js';
 
 const ACTIVE_THEME_KEY = '@wanderlust_palette/active_theme';
 const DEFAULT_THEME = mockData[0]?.palette[0] || '#F7FAFC';
@@ -49,8 +55,16 @@ export default function HomeScreen() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
-  const [pendingPhoto, setPendingPhoto] = useState(null);
+  const [pendingDurablePhoto, setPendingDurablePhoto] = useState(null);
+  const pendingDurablePhotoRef = useRef(null);
+  const [draftJourneyId, setDraftJourneyId] = useState('');
+  const [photoExtractionRequest, setPhotoExtractionRequest] = useState(null);
   const [photoFeedback, setPhotoFeedback] = useState('');
+  const [formPalette, setFormPalette] = useState([]);
+  const [photoPaletteSuggestion, setPhotoPaletteSuggestion] = useState([]);
+  const [paletteFeedback, setPaletteFeedback] = useState('');
+  const [paletteHasManualEdits, setPaletteHasManualEdits] = useState(false);
+  const paletteHasManualEditsRef = useRef(false);
   const [failedImageUris, setFailedImageUris] = useState(() => new Set());
   const [storageError, setStorageError] = useState('');
   const [section, setSection] = useState('discover');
@@ -80,6 +94,12 @@ export default function HomeScreen() {
       isMounted = false;
     };
   }, [sampleJourneys]);
+
+  useEffect(() => () => {
+    const stagedPhoto = pendingDurablePhotoRef.current;
+    pendingDurablePhotoRef.current = null;
+    if (stagedPhoto) cleanupOwnedJourneyPhoto(stagedPhoto);
+  }, []);
 
   const selectedJourney = journeys.find((journey) => journey.id === selectedId) || null;
   const textColor = getContrastColor(activeTheme);
@@ -125,30 +145,46 @@ export default function HomeScreen() {
   };
 
   const openDetail = (journey) => {
-    selectTheme(journey.palette[0]);
     setSelectedId(journey.id);
     setScreen('detail');
   };
 
   const openAddForm = () => {
+    const journeyId = createLocalJourneyId();
     setEditingId(null);
+    setDraftJourneyId(journeyId);
     setForm(EMPTY_FORM);
+    setFormPalette([]);
+    setPhotoPaletteSuggestion([]);
+    setPaletteFeedback('');
+    setPaletteHasManualEdits(false);
+    paletteHasManualEditsRef.current = false;
     setFormErrors({});
-    setPendingPhoto(null);
+    setPendingDurablePhoto(null);
+    pendingDurablePhotoRef.current = null;
+    setPhotoExtractionRequest(null);
     setPhotoFeedback('');
     setScreen('form');
   };
 
   const openEditForm = (journey) => {
     setEditingId(journey.id);
+    setDraftJourneyId(journey.id);
     setForm({
       destination: journey.destination,
       country: journey.country,
       date: journey.date,
       notes: journey.notes,
     });
+    setFormPalette(journey.palette);
+    setPhotoPaletteSuggestion([]);
+    setPaletteFeedback('');
+    setPaletteHasManualEdits(false);
+    paletteHasManualEditsRef.current = false;
     setFormErrors({});
-    setPendingPhoto(null);
+    setPendingDurablePhoto(null);
+    pendingDurablePhotoRef.current = null;
+    setPhotoExtractionRequest(null);
     setPhotoFeedback('');
     setScreen('form');
   };
@@ -174,18 +210,104 @@ export default function HomeScreen() {
         setPhotoFeedback('photo.invalidSelection');
         return;
       }
-      setPendingPhoto(pickerResult.asset);
+      const targetJourneyId = editingId || draftJourneyId || createLocalJourneyId();
+      const durablePhoto = await copyPersonalJourneyPhoto(pickerResult.asset, targetJourneyId);
+      if (!durablePhoto.ok) {
+        setPhotoFeedback('photo.saveFailed');
+        return;
+      }
+
+      const previousStagedPhoto = pendingDurablePhotoRef.current;
+      pendingDurablePhotoRef.current = durablePhoto;
+      setPendingDurablePhoto(durablePhoto);
+      setPhotoPaletteSuggestion([]);
+      setPaletteFeedback('photo.coloursExtracting');
+      setPhotoExtractionRequest({
+        height: pickerResult.asset.height,
+        id: `${Date.now()}-${durablePhoto.imageUri}`,
+        uri: durablePhoto.imageUri,
+        width: pickerResult.asset.width,
+      });
+      if (previousStagedPhoto) await cleanupOwnedJourneyPhoto(previousStagedPhoto);
     } catch (error) {
       setPhotoFeedback('photo.unavailableFeedback');
     }
   };
 
+  const handlePhotoPaletteComplete = (extraction) => {
+    if (!extraction?.ok) {
+      setPhotoPaletteSuggestion([]);
+      setPaletteFeedback('photo.coloursUnavailable');
+      return;
+    }
+
+    const suggestion = normalizePhotoPaletteSuggestion(extraction.colors);
+    if (suggestion.length !== 3) {
+      setPhotoPaletteSuggestion([]);
+      setPaletteFeedback('photo.coloursUnavailable');
+      return;
+    }
+
+    setPhotoPaletteSuggestion(suggestion);
+    setPaletteFeedback('');
+    setFormPalette((current) => resolvePhotoPalette({
+      currentPalette: current,
+      suggestedPalette: suggestion,
+      isEditing: Boolean(editingId),
+      hasManualEdits: paletteHasManualEditsRef.current,
+    }).palette);
+  };
+
+  const acceptPhotoPalette = () => {
+    const resolution = resolvePhotoPalette({
+      currentPalette: formPalette,
+      suggestedPalette: photoPaletteSuggestion,
+      isEditing: Boolean(editingId),
+      hasManualEdits: paletteHasManualEdits,
+      acceptSuggestion: true,
+    });
+    if (resolution.applied) {
+      setFormPalette(resolution.palette);
+      setPaletteHasManualEdits(true);
+      paletteHasManualEditsRef.current = true;
+      setFormErrors((current) => ({ ...current, palette: undefined }));
+    }
+  };
+
+  const updatePaletteColor = (index, value) => {
+    setFormPalette((current) => {
+      const next = current.slice();
+      while (next.length <= index) next.push('');
+      next[index] = value;
+      return next;
+    });
+    setPaletteHasManualEdits(true);
+    paletteHasManualEditsRef.current = true;
+    setFormErrors((current) => ({ ...current, palette: undefined }));
+  };
+
+  const cancelJourneyForm = async () => {
+    const stagedPhoto = pendingDurablePhotoRef.current;
+    pendingDurablePhotoRef.current = null;
+    setPendingDurablePhoto(null);
+    setPhotoExtractionRequest(null);
+    if (stagedPhoto) await cleanupOwnedJourneyPhoto(stagedPhoto);
+    if (editingId && selectedJourney) setScreen('detail');
+    else openList();
+  };
+
   const submitForm = async () => {
-    const newJourneyId = editingId || createLocalJourneyId();
-    let durablePhoto = null;
+    const paletteValidation = validateJourneyPalette(formPalette);
+    if (!paletteValidation.valid) {
+      setFormErrors((current) => ({ ...current, palette: 'invalid' }));
+      return;
+    }
+    const journeyInput = { ...form, palette: paletteValidation.palette };
+    const newJourneyId = editingId || draftJourneyId || createLocalJourneyId();
+    const durablePhoto = pendingDurablePhoto;
     let result = editingId
-      ? updateJourney(journeys, editingId, form)
-      : addJourney(journeys, form, { id: newJourneyId });
+      ? updateJourney(journeys, editingId, journeyInput)
+      : addJourney(journeys, journeyInput, { id: newJourneyId });
 
     if (Object.keys(result.errors).length > 0) {
       setFormErrors(result.errors);
@@ -198,14 +320,9 @@ export default function HomeScreen() {
     }
     const targetJourneyId = result.journey.id;
 
-    if (pendingPhoto) {
-      durablePhoto = await copyPersonalJourneyPhoto(pendingPhoto, targetJourneyId);
-      if (!durablePhoto.ok) {
-        setFormErrors({ form: durablePhoto.error });
-        return;
-      }
+    if (durablePhoto?.ok) {
       const inputWithPhoto = {
-        ...form,
+        ...journeyInput,
         imageSource: durablePhoto.imageSource,
         imageUri: durablePhoto.imageUri,
       };
@@ -217,10 +334,10 @@ export default function HomeScreen() {
     const previousJourney = editingId ? journeys.find((journey) => journey.id === editingId) : null;
     const persistence = await persistJourneys(result.journeys);
     if (!persistence.ok) {
-      if (durablePhoto?.ok) await cleanupOwnedJourneyPhoto(durablePhoto);
       setFormErrors({ form: persistence.error });
       return;
     }
+    pendingDurablePhotoRef.current = null;
     if (durablePhoto?.ok && previousJourney) await cleanupOwnedJourneyPhoto(previousJourney);
     if (durablePhoto?.imageUri) {
       setFailedImageUris((current) => {
@@ -232,7 +349,10 @@ export default function HomeScreen() {
     setSelectedId(result.journey.id);
     setEditingId(null);
     setFormErrors({});
-    setPendingPhoto(null);
+    setPendingDurablePhoto(null);
+    setPhotoExtractionRequest(null);
+    setPhotoPaletteSuggestion([]);
+    setPaletteFeedback('');
     setPhotoFeedback('');
     setScreen('detail');
   };
@@ -287,13 +407,9 @@ export default function HomeScreen() {
     return (
       <View style={styles.paletteRow}>
         {journey.palette.slice(0, 5).map((color) => (
-          <Pressable
-            accessibilityLabel={t('journeys.themeA11y', { color })}
+          <View
+            accessibilityLabel={t('journeys.paletteColourA11y', { color })}
             key={color}
-            onPress={(event) => {
-              event.stopPropagation();
-              selectTheme(color);
-            }}
             style={[styles.swatch, { backgroundColor: color }]}
           />
         ))}
@@ -390,7 +506,10 @@ export default function HomeScreen() {
         <Pressable onPress={openList} style={styles.backButton}>
           <Text style={styles.backButtonText}>← {t('journeys.myJourneys')}</Text>
         </Pressable>
-        <View style={styles.detailCard}>
+        <View style={[
+          styles.detailCard,
+          selectedJourney.palette[0] ? { borderTopColor: selectedJourney.palette[0], borderTopWidth: 8 } : null,
+        ]}>
           {renderJourneyImage(selectedJourney.imageUri, styles.detailImage)}
           <Text style={styles.cardDate}>{selectedJourney.date}</Text>
           <Text style={styles.detailTitle}>{selectedJourney.destination}</Text>
@@ -428,7 +547,7 @@ export default function HomeScreen() {
 
   const renderForm = () => (
     <>
-      <Pressable onPress={() => (editingId && selectedJourney ? setScreen('detail') : openList())} style={styles.backButton}>
+      <Pressable onPress={cancelJourneyForm} style={styles.backButton}>
         <Text style={styles.backButtonText}>← {t('common.cancel')}</Text>
       </Pressable>
       <View style={styles.formCard}>
@@ -440,8 +559,8 @@ export default function HomeScreen() {
         {renderField('notes', t('journeys.notes'), { multiline: true, placeholder: t('journeys.notesPlaceholder') })}
         <View style={styles.photoField}>
           <Text style={styles.label}>{t('photo.field')}</Text>
-          {pendingPhoto?.uri
-            ? <Image accessibilityLabel={t('photo.previewA11y')} source={{ uri: pendingPhoto.uri }} style={styles.photoPreview} />
+          {pendingDurablePhoto?.imageUri
+            ? <Image accessibilityLabel={t('photo.previewA11y')} source={{ uri: pendingDurablePhoto.imageUri }} style={styles.photoPreview} />
             : editingId && selectedJourney?.imageUri
               ? renderJourneyImage(selectedJourney.imageUri, styles.photoPreview)
               : <View accessibilityLabel={t('photo.noneSelected')} style={[styles.photoPreview, styles.imageFallback]}><Text style={styles.imageFallbackText}>{t('photo.noneSelected')}</Text></View>}
@@ -449,6 +568,51 @@ export default function HomeScreen() {
             <Text style={styles.secondaryButtonText}>{editingId && selectedJourney?.imageSource === 'personal' ? t('photo.replace') : t('photo.choose')}</Text>
           </Pressable>
           {photoFeedback ? <Text accessibilityRole="alert" style={styles.photoFeedback}>{t(photoFeedback)}</Text> : null}
+          {photoExtractionRequest ? (
+            <PhotoPaletteExtractor
+              key={photoExtractionRequest.id}
+              onComplete={handlePhotoPaletteComplete}
+              request={photoExtractionRequest}
+            />
+          ) : null}
+          {paletteFeedback ? <Text accessibilityRole="status" style={styles.photoFeedback}>{t(paletteFeedback)}</Text> : null}
+        </View>
+        {photoPaletteSuggestion.length === 3 ? (
+          <View style={styles.suggestedPalette}>
+            <Text style={styles.label}>{t('photo.coloursFromPhoto')}</Text>
+            <View style={styles.suggestedPaletteRow}>
+              {photoPaletteSuggestion.map((color) => (
+                <View accessibilityLabel={t('journeys.paletteColourA11y', { color })} key={color} style={[styles.suggestedSwatch, { backgroundColor: color }]} />
+              ))}
+            </View>
+            <Pressable onPress={acceptPhotoPalette} style={styles.secondaryButtonWide}>
+              <Text style={styles.secondaryButtonText}>{t('photo.useColours')}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        <View style={styles.paletteEditor}>
+          <Text style={styles.label}>{t('photo.paletteField')}</Text>
+          <Text style={styles.paletteHelp}>{t('photo.paletteHelp')}</Text>
+          {Array.from({ length: Math.max(3, Math.min(5, formPalette.length)) }, (_, index) => index).map((index) => {
+            const color = formPalette[index] || '';
+            const validColor = /^#[0-9A-F]{6}$/i.test(color);
+            return (
+              <View key={index} style={styles.paletteInputRow}>
+                <View style={[styles.paletteInputSwatch, validColor ? { backgroundColor: color } : null]} />
+                <TextInput
+                  accessibilityLabel={t('photo.paletteColour', { number: index + 1 })}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={7}
+                  onChangeText={(value) => updatePaletteColor(index, value)}
+                  placeholder="#RRGGBB"
+                  style={styles.paletteInput}
+                  value={color}
+                />
+              </View>
+            );
+          })}
+          {formErrors.palette ? <Text style={styles.errorText}>{t('photo.invalidPalette')}</Text> : null}
         </View>
         {formErrors.form ? <Text style={styles.errorText}>{localizeMessage(formErrors.form)}</Text> : null}
         <Pressable onPress={submitForm} style={styles.primaryButtonWide}>
@@ -618,6 +782,14 @@ const styles = StyleSheet.create({
   photoField: { marginBottom: 18 },
   photoPreview: { aspectRatio: 1.55, backgroundColor: '#E8EEF2', borderRadius: 8, marginBottom: 10, width: '100%' },
   photoFeedback: { color: '#667085', fontSize: 13, lineHeight: 18, marginTop: 8 },
+  suggestedPalette: { backgroundColor: '#F4F7F8', borderRadius: 8, marginBottom: 18, padding: 14 },
+  suggestedPaletteRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  suggestedSwatch: { borderColor: '#FFFFFF', borderRadius: 6, borderWidth: 2, flex: 1, height: 42 },
+  paletteEditor: { marginBottom: 18 },
+  paletteHelp: { color: '#667085', fontSize: 12, lineHeight: 18, marginBottom: 8 },
+  paletteInputRow: { alignItems: 'center', flexDirection: 'row', gap: 10, marginBottom: 8 },
+  paletteInputSwatch: { backgroundColor: '#E8EEF2', borderColor: '#CBD5E0', borderRadius: 5, borderWidth: 1, height: 34, width: 34 },
+  paletteInput: { backgroundColor: '#FFFFFF', borderColor: '#CBD5E0', borderRadius: 8, borderWidth: 1, color: '#17202A', flex: 1, fontSize: 15, paddingHorizontal: 12, paddingVertical: 9 },
   secondaryButtonWide: { alignItems: 'center', backgroundColor: '#E8EEF2', borderRadius: 8, padding: 13 },
   inputError: { borderColor: '#C62828' },
   errorText: { color: '#B42318', fontSize: 13, marginTop: 5 },

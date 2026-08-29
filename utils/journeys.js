@@ -109,6 +109,7 @@ export function addJourney(journeys, input, options = {}) {
     id,
     imageSource: input.imageSource,
     imageUri: input.imageUri,
+    palette: input.palette,
     createdAt: timestamp,
     updatedAt: timestamp,
   });
@@ -127,10 +128,12 @@ export function updateJourney(journeys, id, input, timestamp = new Date().toISOS
   }
 
   const hasPhotoUpdate = Object.prototype.hasOwnProperty.call(input, 'imageUri');
+  const hasPaletteUpdate = Object.prototype.hasOwnProperty.call(input, 'palette');
   const journey = normalizeJourney({
     ...currentJourneys[targetIndex],
     ...validation.values,
     ...(hasPhotoUpdate ? { imageSource: input.imageSource, imageUri: input.imageUri } : {}),
+    ...(hasPaletteUpdate ? { palette: input.palette } : {}),
     updatedAt: timestamp,
   });
   const nextJourneys = currentJourneys.slice();

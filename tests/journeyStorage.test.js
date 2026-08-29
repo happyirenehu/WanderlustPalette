@@ -78,6 +78,23 @@ describe('journey storage operations', () => {
     expect(JSON.parse(mockStorage.setItem.mock.calls[0][1])[0]).toMatchObject({ id: 'fallback', notes: '' });
   });
 
+  test('persists a photo palette through save and reload without extraction metadata', async () => {
+    const journey = {
+      ...FALLBACK[0],
+      palette: ['#AA2200', '#22AA00', '#0022AA'],
+    };
+    let storedValue = null;
+    mockStorage.setItem.mockImplementation(async (_key, value) => { storedValue = value; });
+    mockStorage.getItem.mockImplementation(async () => storedValue);
+
+    await expect(saveJourneys([journey], mockStorage)).resolves.toEqual({ ok: true, error: null });
+    const loaded = await loadJourneys([], mockStorage);
+
+    expect(loaded.journeys[0].palette).toEqual(journey.palette);
+    expect(loaded.journeys[0]).not.toHaveProperty('extractedPalette');
+    expect(loaded.journeys[0]).not.toHaveProperty('paletteSource');
+  });
+
   test('reports write failures without throwing', async () => {
     mockStorage.setItem.mockRejectedValue(new Error('write failed'));
 
