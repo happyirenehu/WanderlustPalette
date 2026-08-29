@@ -27,6 +27,14 @@ import { cleanupOwnedJourneyPhoto, copyPersonalJourneyPhoto } from '../utils/jou
 import normalizePhotoPickerResult from '../utils/photoPicker.js';
 import getExpenseInsights from '../utils/expenseInsights.js';
 import { addExpense, deleteExpense, updateExpense } from '../utils/expenses.js';
+import { buildColourPassport } from '../utils/colourPassport.js';
+import { buildPreferenceProfile } from '../utils/preferenceProfile.js';
+import {
+  addRecentVibeId,
+  loadRecentVibeIds,
+  normalizeRecentVibeIds,
+  saveRecentVibeIds,
+} from '../utils/recentVibes.js';
 import {
   deriveDreamMemoryDestinationIds,
   getDestinationJourneyPrefill,
@@ -58,6 +66,7 @@ export default function HomeScreen() {
   const scrollViewRef = useRef(null);
   const sampleJourneys = useMemo(() => normalizeJourneys(mockData), []);
   const [journeys, setJourneys] = useState(sampleJourneys);
+  const [hasStoredJourneys, setHasStoredJourneys] = useState(false);
   const [activeTheme, setActiveTheme] = useState(DEFAULT_THEME);
   const [screen, setScreen] = useState('list');
   const [selectedId, setSelectedId] = useState(null);
@@ -82,22 +91,42 @@ export default function HomeScreen() {
   const [dreamStorageError, setDreamStorageError] = useState('');
   const [expenseForm, setExpenseForm] = useState(null);
   const [expenseErrors, setExpenseErrors] = useState({});
+  const [recentVibeIds, setRecentVibeIds] = useState([]);
+  const recentVibeIdsRef = useRef([]);
+  const recentVibeHydratedRef = useRef(false);
+  const pendingRecentVibeIdsRef = useRef([]);
+  const recentVibeSaveQueueRef = useRef(Promise.resolve());
+  const [recentVibeStorageError, setRecentVibeStorageError] = useState('');
 
   useEffect(() => {
     let isMounted = true;
 
     const loadAppState = async () => {
-      const [journeyResult, savedThemeResult, favouriteResult] = await Promise.all([
+      const [journeyResult, savedThemeResult, favouriteResult, recentVibeResult] = await Promise.all([
         loadJourneys(sampleJourneys),
         AsyncStorage.getItem(ACTIVE_THEME_KEY).catch(() => null),
         loadFavouriteIds(),
+        loadRecentVibeIds(),
       ]);
 
       if (!isMounted) return;
       setJourneys(journeyResult.journeys);
+      setHasStoredJourneys(journeyResult.hasStoredJourneys);
       setStorageError(journeyResult.error || '');
       setFavouriteIds(favouriteResult.ids);
       setDreamStorageError(favouriteResult.error || '');
+      const pendingIds = pendingRecentVibeIdsRef.current;
+      const hydratedIds = normalizeRecentVibeIds([...pendingIds, ...recentVibeResult.ids]);
+      recentVibeHydratedRef.current = true;
+      pendingRecentVibeIdsRef.current = [];
+      recentVibeIdsRef.current = hydratedIds;
+      setRecentVibeIds(hydratedIds);
+      setRecentVibeStorageError(recentVibeResult.error || '');
+      if (pendingIds.length) {
+        recentVibeSaveQueueRef.current = recentVibeSaveQueueRef.current
+          .then(() => saveRecentVibeIds(hydratedIds))
+          .then((result) => setRecentVibeStorageError(result.error || ''));
+      }
       if (savedThemeResult) setActiveTheme(savedThemeResult);
     };
 
@@ -118,6 +147,19 @@ export default function HomeScreen() {
     () => deriveDreamMemoryDestinationIds(favouriteIds, journeys),
     [favouriteIds, journeys],
   );
+  const personalizationJourneys = useMemo(
+    () => (hasStoredJourneys ? journeys : []),
+    [hasStoredJourneys, journeys],
+  );
+  const preferenceProfile = useMemo(() => buildPreferenceProfile({
+    recentVibeIds,
+    dreamDestinationIds: favouriteIds,
+    journeys: personalizationJourneys,
+  }), [favouriteIds, personalizationJourneys, recentVibeIds]);
+  const colourPassport = useMemo(() => buildColourPassport({
+    profile: preferenceProfile,
+    journeys: personalizationJourneys,
+  }), [personalizationJourneys, preferenceProfile]);
   const textColor = getContrastColor(activeTheme);
   const resetScrollPosition = useCallback(() => {
     scrollViewRef.current?.scrollTo({ animated: false, y: 0 });
@@ -140,7 +182,10 @@ export default function HomeScreen() {
   const persistJourneys = async (nextJourneys) => {
     const result = await saveJourneys(nextJourneys);
     setStorageError(result.error || '');
-    if (result.ok) setJourneys(nextJourneys);
+    if (result.ok) {
+      setJourneys(nextJourneys);
+      setHasStoredJourneys(true);
+    }
     return result;
   };
 
@@ -152,6 +197,19 @@ export default function HomeScreen() {
     const result = await saveFavouriteIds(nextIds);
     setDreamStorageError(result.error || '');
   };
+
+  const recordRecentVibe = useCallback((vibeId) => {
+    const nextIds = addRecentVibeId(recentVibeIdsRef.current, vibeId);
+    recentVibeIdsRef.current = nextIds;
+    setRecentVibeIds(nextIds);
+    if (!recentVibeHydratedRef.current) {
+      pendingRecentVibeIdsRef.current = addRecentVibeId(pendingRecentVibeIdsRef.current, vibeId);
+      return;
+    }
+    recentVibeSaveQueueRef.current = recentVibeSaveQueueRef.current
+      .then(() => saveRecentVibeIds(nextIds))
+      .then((result) => setRecentVibeStorageError(result.error || ''));
+  }, []);
 
   const openList = () => {
     setScreen('list');
@@ -888,6 +946,14 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       ) : null}
+      {section === 'discover' && recentVibeStorageError ? (
+        <View accessibilityRole="alert" style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{localizeMessage(recentVibeStorageError)}</Text>
+          <Pressable onPress={() => setRecentVibeStorageError('')}>
+            <Text style={styles.dismissText}>{t('common.dismiss')}</Text>
+          </Pressable>
+        </View>
+      ) : null}
       {section !== 'journeys' && dreamStorageError ? (
         <View accessibilityRole="alert" style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{localizeMessage(dreamStorageError)}</Text>
@@ -898,6 +964,7 @@ export default function HomeScreen() {
       ) : null}
       {section === 'discover' || section === 'dream' ? (
         <SignatureScreen
+          colourPassport={colourPassport}
           favouriteIds={favouriteIds}
           memoryDestinationIds={memoryDestinationIds}
           mode={section}
@@ -906,6 +973,8 @@ export default function HomeScreen() {
           onRecommendationReady={scrollToDiscoveryResults}
           onSelectTheme={selectTheme}
           onToggleFavourite={toggleFavourite}
+          onVibeSelect={recordRecentVibe}
+          preferenceProfile={preferenceProfile}
         />
       ) : null}
       {section === 'journeys' && screen === 'list' ? renderList() : null}

@@ -14,10 +14,16 @@ import { getRelatedDestinations, getVibeById, normalizeDestinations, normalizeVi
 import getDreamPaletteInsights from '../utils/destinationInsights.js';
 import { isFavouriteId } from '../utils/dreamPalette.js';
 import { isDreamMemoryDestination } from '../utils/journeyDestination.js';
+import { getAdaptiveRecommendations } from '../utils/adaptiveRecommendations.js';
+import {
+  getPassportNarrative,
+  getRecommendationReasonPresentation,
+} from '../utils/personalizationPresentation.js';
 
 const FALLBACK_COLOR = '#E8EEF2';
 
 export default function SignatureScreen({
+  colourPassport,
   mode,
   favouriteIds,
   memoryDestinationIds,
@@ -26,6 +32,8 @@ export default function SignatureScreen({
   onRecommendationReady,
   onSelectTheme,
   onToggleFavourite,
+  onVibeSelect,
+  preferenceProfile,
 }) {
   const { formatCapital, formatCountry, formatDestination, formatIncome, formatRegion, locale, t } = useLanguage();
   const vibes = useMemo(() => normalizeVibes(vibesData).map((vibe) => ({
@@ -68,10 +76,31 @@ export default function SignatureScreen({
     ? recommendDestinationsByColor(selectedColorId, destinations, colors)
     : recommendDestinations(selectedVibeId, destinations, vibes);
   const recommendations = applyBudgetPreference(baseRecommendations, budgetPreference);
+  const personalizedResult = useMemo(
+    () => getAdaptiveRecommendations(destinationsData, preferenceProfile, { limit: 3 }),
+    [preferenceProfile],
+  );
+  const localizedDestinationsById = new Map(destinations.map((destination) => [destination.id, destination]));
+  const inspiredRecommendations = personalizedResult.recommendations
+    .map((recommendation) => ({
+      ...recommendation,
+      destination: localizedDestinationsById.get(recommendation.destination.id),
+    }))
+    .filter((recommendation) => recommendation.destination);
   const budgetLabel = (id) => t(`budget.${id}`, {}, id);
   const budgetDisplay = (id) => {
     const level = BUDGET_LEVELS.find((item) => item.id === id);
     return level ? `${level.symbol} · ${budgetLabel(id)}` : '';
+  };
+  const vibeName = (id) => vibes.find((vibe) => vibe.id === id)?.name || id;
+  const colorName = (id) => colors.find((color) => color.id === id)?.name || id;
+  const reasonText = (reason) => {
+    const presentation = getRecommendationReasonPresentation(reason);
+    if (!presentation) return '';
+    const name = presentation.subject === 'vibe'
+      ? vibeName(presentation.subjectId)
+      : colorName(presentation.subjectId);
+    return t(presentation.key, { name });
   };
 
   useEffect(() => setSelectedDestinationId(null), [mode]);
@@ -119,6 +148,7 @@ export default function SignatureScreen({
   const selectVibe = (vibeId) => {
     pendingResultsScroll.current = true;
     setSelectedVibeId(vibeId);
+    onVibeSelect?.(vibeId);
   };
 
   const handleResultsLayout = (event) => {
@@ -129,7 +159,7 @@ export default function SignatureScreen({
     }
   };
 
-  const renderDestinationCard = (destination, compact = false) => {
+  const renderDestinationCard = (destination, compact = false, personalizationReasons = []) => {
     const saved = isFavouriteId(favouriteIds, destination.id);
     const becameMemory = mode === 'dream' && isDreamMemoryDestination(memoryDestinationIds, destination.id);
     return (
@@ -144,6 +174,15 @@ export default function SignatureScreen({
             </View>
           </View>
           {becameMemory ? <Text style={styles.memoryMessage}>{t('dream.becameMemory')}</Text> : null}
+          {personalizationReasons.length ? (
+            <View accessibilityLabel={t('personalization.whyTitle')} style={styles.reasonList}>
+              <Text style={styles.reasonTitle}>{t('personalization.whyTitle')}</Text>
+              {personalizationReasons.map((reason, index) => {
+                const text = reasonText(reason);
+                return text ? <Text key={`${reason.type}-${index}`} style={styles.reasonText}>• {text}</Text> : null;
+              })}
+            </View>
+          ) : null}
           {!compact ? <><Text style={styles.destinationDescription}>{destination.description}</Text>{renderPalette(destination.palette, destination.name)}</> : null}
         </View>
       </Pressable>
@@ -200,6 +239,34 @@ export default function SignatureScreen({
     <>
       <View style={styles.intro}><Text style={styles.eyebrow}>{t('dream.kicker')}</Text><Text style={styles.pageTitle}>{t('dream.title')}</Text><Text style={styles.pageSubtitle}>{t('dream.subtitle')}</Text></View>
       {insights.total ? <View accessibilityLabel={t('dream.insightsA11y')} style={styles.insightsCard}><Text style={styles.eyebrow}>{t('dream.styleKicker')}</Text><Text style={styles.insightCount}>{t(insights.total === 1 ? 'dream.savedPlaceOne' : 'dream.savedPlaceOther', { count: insights.total })}</Text><Text style={styles.insightLabel}>{t('dream.strongestVibe')}</Text><Text style={styles.insightValue}>{insights.dominantVibe?.name}</Text><Text style={styles.insightLabel}>{t('dream.colorStory')}</Text><Text style={styles.insightValue}>{insights.dominantColor?.name}</Text><Text style={styles.insightLabel}>{t('dream.typicalBudget')}</Text><Text style={styles.insightValue}>{insights.dominantBudget ? `${insights.dominantBudget.symbol} · ${budgetLabel(insights.dominantBudget.id)}` : t('dream.stillUnfolding')}</Text><Text style={styles.insightLabel}>{t('dream.budgetMix')}</Text>{insights.budgetDistribution.filter((item) => item.count > 0).map((item) => <View key={item.id} style={styles.budgetMixRow}><Text style={styles.budgetMixLabel}>{item.symbol} {budgetLabel(item.id)}</Text><Text style={styles.budgetMixCount}>{item.count}</Text></View>)}<Text style={styles.insightNote}>{t('dream.insightNote')}</Text></View> : null}
+      <View accessibilityLabel={t('passport.title')} style={styles.passportCard}>
+        <Text style={styles.eyebrow}>{t('passport.kicker')}</Text>
+        <Text style={styles.passportTitle}>{t('passport.title')}</Text>
+        {colourPassport?.isEmpty ? (
+          <Text style={styles.passportEmpty}>{t('passport.empty')}</Text>
+        ) : (
+          <>
+            {(() => {
+              const narrative = getPassportNarrative(colourPassport);
+              if (!narrative) return null;
+              const params = narrative.key === 'passport.contrast'
+                ? { dream: colorName(narrative.dreamColorId), memory: colorName(narrative.memoryColorId) }
+                : { color: colorName(narrative.colorId) };
+              return <Text style={styles.passportNarrative}>{t(narrative.key, params)}</Text>;
+            })()}
+            {colourPassport?.representativePalette?.length ? (
+              <View accessibilityLabel={t('passport.paletteA11y')} style={styles.passportPalette}>
+                {colourPassport.representativePalette.map((hex) => <View accessibilityLabel={t('passport.swatchA11y', { color: hex })} key={hex} style={[styles.passportSwatch, { backgroundColor: hex }]} />)}
+              </View>
+            ) : null}
+            <View style={styles.passportFacts}>
+              {colourPassport?.dream?.dominantColor ? <View style={styles.passportFact}><Text style={styles.passportFactLabel}>{t('passport.dreamColor')}</Text><Text style={styles.passportFactValue}>{colorName(colourPassport.dream.dominantColor.id)}</Text></View> : null}
+              {colourPassport?.memory?.dominantColor ? <View style={styles.passportFact}><Text style={styles.passportFactLabel}>{t('passport.memoryColor')}</Text><Text style={styles.passportFactValue}>{colorName(colourPassport.memory.dominantColor.id)}</Text></View> : null}
+              {colourPassport?.dominantVibe ? <View style={styles.passportFact}><Text style={styles.passportFactLabel}>{t('passport.dominantVibe')}</Text><Text style={styles.passportFactValue}>{vibeName(colourPassport.dominantVibe.id)}</Text></View> : null}
+            </View>
+          </>
+        )}
+      </View>
       {dreamDestinations.length ? dreamDestinations.map((item) => renderDestinationCard(item)) : <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t('dream.emptyTitle')}</Text><Text style={styles.emptyCopy}>{t('dream.emptyCopy')}</Text></View>}
     </>
   );
@@ -231,6 +298,16 @@ export default function SignatureScreen({
         <View style={styles.budgetControls}>{[{ id: 'any', symbol: '' }, ...BUDGET_LEVELS].map((item) => { const selected = budgetPreference === item.id; const label = budgetLabel(item.id); return <Pressable accessibilityLabel={t('budget.preferenceA11y', { label, selected: selected ? t('budget.selectedSuffix') : '' })} accessibilityRole="button" accessibilityState={{ selected }} key={item.id} onPress={() => setBudgetPreference(item.id)} style={[styles.budgetButton, selected && styles.budgetButtonSelected]}><Text style={[styles.budgetButtonText, selected && styles.budgetButtonTextSelected]}>{item.symbol ? `${item.symbol} ` : ''}{label}{selected ? ' ✓' : ''}</Text></Pressable>; })}</View>
       </View>
       {!selectedIdentity ? <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t(discoveryMode === 'vibe' ? 'discovery.beginVibe' : 'discovery.beginColor')}</Text><Text style={styles.emptyCopy}>{t(discoveryMode === 'vibe' ? 'discovery.readyVibes' : 'discovery.readyColors')}</Text></View> : <><View style={[styles.identityCard, { backgroundColor: selectedIdentity.palette?.[2] || '#F4F0E8' }]}><Text style={styles.eyebrow}>{discoveryMode === 'vibe' ? selectedIdentity.colorFamily : t('discovery.curatedColorStory')}</Text><Text style={styles.identityTitle}>{selectedIdentity.name}</Text><Text style={styles.identityDescription}>{selectedIdentity.description}</Text>{renderPalette(selectedIdentity.palette || [], selectedIdentity.name)}</View><View onLayout={handleResultsLayout}><Text style={styles.resultsTitle}>{discoveryMode === 'vibe' ? t('discovery.vibeDestinations', { name: selectedIdentity.name }) : t('discovery.colorDestinations')}</Text>{recommendations.length ? recommendations.map((item) => renderDestinationCard(item)) : <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t(baseRecommendations.length ? 'discovery.noBudgetMatches' : 'discovery.noMatches')}</Text>{baseRecommendations.length ? <Text style={styles.emptyCopy}>{t('discovery.chooseAnotherBudget')}</Text> : null}</View>}</View></>}
+      <View style={styles.inspiredSection}>
+        <Text style={styles.eyebrow}>{t('personalization.kicker')}</Text>
+        <Text style={styles.inspiredTitle}>{t('personalization.title')}</Text>
+        <Text style={styles.inspiredCopy}>{t(personalizedResult.personalized ? 'personalization.personalizedCopy' : 'personalization.neutralCopy')}</Text>
+        {inspiredRecommendations.map((recommendation) => renderDestinationCard(
+          recommendation.destination,
+          true,
+          personalizedResult.personalized ? recommendation.reasons : [],
+        ))}
+      </View>
     </>
   );
 }
@@ -243,8 +320,11 @@ const styles = StyleSheet.create({
   budgetSection: { marginBottom: 20 }, budgetTitle: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 1.2, marginBottom: 8 }, budgetControls: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 }, budgetButton: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#D0D5DD', borderRadius: 7, borderWidth: 1, flexGrow: 1, paddingHorizontal: 8, paddingVertical: 8 }, budgetButtonSelected: { backgroundColor: '#17202A', borderColor: '#17202A' }, budgetButtonText: { color: '#667085', fontSize: 10, fontWeight: '800' }, budgetButtonTextSelected: { color: '#FFFFFF' },
   identityCard: { borderRadius: 10, marginBottom: 24, padding: 20 }, identityTitle: { color: '#17202A', fontSize: 30, fontWeight: '800', marginTop: 5 }, identityDescription: { color: '#344054', fontSize: 14, lineHeight: 21, marginTop: 7 }, resultsTitle: { color: '#17202A', fontSize: 22, fontWeight: '800', marginBottom: 14 },
   destinationCard: { backgroundColor: '#FFFFFF', borderRadius: 10, elevation: 3, marginBottom: 20, overflow: 'hidden', shadowColor: '#000000', shadowOffset: { height: 4, width: 0 }, shadowOpacity: 0.12, shadowRadius: 10 }, compactCard: { marginBottom: 14 }, pressedCard: { opacity: 0.88 }, destinationBody: { padding: 18 }, destinationHeading: { alignItems: 'flex-start', flexDirection: 'row', gap: 10, justifyContent: 'space-between' }, destinationCopy: { flex: 1 }, destinationName: { color: '#17202A', fontSize: 28, fontWeight: '800', marginTop: 5 }, compactName: { fontSize: 22 }, destinationCountry: { color: '#667085', fontSize: 14, fontWeight: '600', marginTop: 1 }, destinationDescription: { color: '#4B5563', fontSize: 14, lineHeight: 21, marginTop: 12 }, badgeColumn: { alignItems: 'flex-end', gap: 6 }, savedBadge: { backgroundColor: '#E8F1EC', borderRadius: 5, color: '#28533C', fontSize: 10, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 5 }, memoryBadge: { backgroundColor: '#F3EAF7', borderRadius: 5, color: '#68427A', fontSize: 10, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 5 }, memoryMessage: { color: '#68427A', fontSize: 13, fontWeight: '800', marginTop: 12 },
+  reasonList: { backgroundColor: '#F4F7F8', borderRadius: 7, marginTop: 12, padding: 11 }, reasonTitle: { color: '#344054', fontSize: 11, fontWeight: '900', letterSpacing: 0.7, textTransform: 'uppercase' }, reasonText: { color: '#4B5563', fontSize: 12, lineHeight: 18, marginTop: 5 },
   paletteRow: { flexDirection: 'row', gap: 8, marginTop: 16 }, swatch: { borderColor: '#FFFFFF', borderRadius: 5, borderWidth: 2, flex: 1, height: 34 }, emptyCard: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 10, padding: 28 }, emptyTitle: { color: '#17202A', fontSize: 22, fontWeight: '800', textAlign: 'center' }, emptyCopy: { color: '#667085', fontSize: 14, lineHeight: 21, marginTop: 8, textAlign: 'center' },
   backButton: { alignSelf: 'flex-start', backgroundColor: '#FFFFFF', borderRadius: 8, marginBottom: 14, paddingHorizontal: 14, paddingVertical: 10 }, backButtonText: { color: '#17202A', fontSize: 14, fontWeight: '800' }, detailCard: { backgroundColor: '#FFFFFF', borderRadius: 10, overflow: 'hidden' }, detailBody: { padding: 22 }, detailKicker: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 1.5 }, detailTitle: { color: '#17202A', fontSize: 38, fontWeight: '900', marginTop: 5 }, detailCountry: { color: '#667085', fontSize: 17, fontWeight: '600', marginTop: 2 }, detailMemoryMessage: { backgroundColor: '#F3EAF7', borderRadius: 7, color: '#68427A', fontSize: 14, fontWeight: '800', marginTop: 16, overflow: 'hidden', padding: 12 }, vibeLine: { color: '#8D4F5B', fontSize: 12, fontWeight: '900', letterSpacing: 1, marginTop: 18, textTransform: 'uppercase' }, detailDescription: { color: '#4B5563', fontSize: 15, lineHeight: 23, marginTop: 9 }, detailSectionTitle: { color: '#17202A', fontSize: 17, fontWeight: '800', marginTop: 22 },
   snapshot: { backgroundColor: '#F4F7F8', borderRadius: 8, marginTop: 24, padding: 16 }, snapshotRegion: { color: '#17202A', fontSize: 21, fontWeight: '900', marginBottom: 14, marginTop: 5 }, factLabel: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 0.8, marginTop: 12, textTransform: 'uppercase' }, factValue: { color: '#17202A', fontSize: 15, fontWeight: '700', marginTop: 3 }, sourceNote: { color: '#667085', fontSize: 10, marginTop: 3 }, saveButton: { alignItems: 'center', backgroundColor: '#17202A', borderRadius: 8, marginTop: 26, padding: 14 }, saveButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' }, removeButton: { backgroundColor: '#FDECEC', borderColor: '#D92D20', borderWidth: 1 }, removeButtonText: { color: '#A61B1B' }, addJourneyButton: { alignItems: 'center', backgroundColor: '#E8EEF2', borderRadius: 8, marginTop: 10, padding: 14 }, addJourneyButtonText: { color: '#17202A', fontSize: 14, fontWeight: '800' }, credit: { color: '#667085', fontSize: 11, marginTop: 14, textAlign: 'center', textDecorationLine: 'underline' }, relatedSection: { marginTop: 26 },
   insightsCard: { backgroundColor: '#FFFFFF', borderRadius: 10, marginBottom: 20, padding: 22 }, insightCount: { color: '#17202A', fontSize: 28, fontWeight: '900', marginTop: 7 }, insightLabel: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 1.2, marginTop: 18 }, insightValue: { color: '#8D4F5B', fontSize: 20, fontWeight: '800', marginTop: 3 }, budgetMixRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }, budgetMixLabel: { color: '#344054', fontSize: 13, fontWeight: '700' }, budgetMixCount: { color: '#17202A', fontSize: 13, fontWeight: '900' }, insightNote: { color: '#667085', fontSize: 12, marginTop: 18 }, darkButton: { backgroundColor: '#17202A', borderRadius: 8, marginTop: 18, paddingHorizontal: 18, paddingVertical: 12 }, darkButtonText: { color: '#FFFFFF', fontWeight: '800' },
+  inspiredSection: { backgroundColor: '#E8EEF2', borderRadius: 10, marginTop: 28, padding: 18 }, inspiredTitle: { color: '#17202A', fontSize: 28, fontWeight: '900', marginTop: 5 }, inspiredCopy: { color: '#4B5563', fontSize: 14, lineHeight: 21, marginBottom: 18, marginTop: 7 },
+  passportCard: { backgroundColor: '#FFFFFF', borderRadius: 10, marginBottom: 20, padding: 22 }, passportTitle: { color: '#17202A', fontSize: 28, fontWeight: '900', marginTop: 5 }, passportNarrative: { color: '#68427A', fontSize: 19, fontWeight: '800', lineHeight: 27, marginTop: 14 }, passportEmpty: { color: '#667085', fontSize: 14, lineHeight: 21, marginTop: 12 }, passportPalette: { flexDirection: 'row', gap: 7, marginTop: 18 }, passportSwatch: { borderColor: '#FFFFFF', borderRadius: 6, borderWidth: 2, flex: 1, height: 48 }, passportFacts: { gap: 10, marginTop: 18 }, passportFact: { borderTopColor: '#E4E9EC', borderTopWidth: 1, paddingTop: 10 }, passportFactLabel: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase' }, passportFactValue: { color: '#17202A', fontSize: 17, fontWeight: '800', marginTop: 3 },
 });

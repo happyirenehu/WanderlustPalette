@@ -18,10 +18,15 @@ export function parseStoredJourneys(value, fallbackJourneys = []) {
 export async function loadJourneys(fallbackJourneys = [], storage = AsyncStorage) {
   try {
     const storedValue = await storage.getItem(JOURNEYS_STORAGE_KEY);
-    return { journeys: parseStoredJourneys(storedValue, fallbackJourneys), error: null };
+    return {
+      journeys: parseStoredJourneys(storedValue, fallbackJourneys),
+      hasStoredJourneys: storedValue !== null,
+      error: null,
+    };
   } catch (error) {
     return {
       journeys: normalizeJourneys(fallbackJourneys),
+      hasStoredJourneys: false,
       error: 'Saved journeys could not be loaded. Showing the bundled journeys instead.',
     };
   }

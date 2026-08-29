@@ -56,7 +56,15 @@ describe('journey storage operations', () => {
 
     expect(mockStorage.getItem).toHaveBeenCalledWith(JOURNEYS_STORAGE_KEY);
     expect(result.error).toBeNull();
+    expect(result.hasStoredJourneys).toBe(true);
     expect(result.journeys[0].id).toBe('fallback');
+  });
+
+  test('distinguishes bundled fallback Journeys from persisted user evidence', async () => {
+    mockStorage.getItem.mockResolvedValue(null);
+    const result = await loadJourneys(FALLBACK, mockStorage);
+    expect(result.journeys[0].id).toBe('fallback');
+    expect(result.hasStoredJourneys).toBe(false);
   });
 
   test('falls back safely when reading storage fails', async () => {
@@ -65,6 +73,7 @@ describe('journey storage operations', () => {
     const result = await loadJourneys(FALLBACK, mockStorage);
 
     expect(result.journeys[0].id).toBe('fallback');
+    expect(result.hasStoredJourneys).toBe(false);
     expect(result.error).toMatch(/could not be loaded/i);
   });
 

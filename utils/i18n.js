@@ -20,6 +20,8 @@ const MESSAGE_KEYS = {
   'The theme changed for this session but could not be saved.': 'errors.themeSave',
   'This photo format could not be saved safely.': 'errors.unsafePhoto',
   'The photo could not be saved on this device.': 'errors.photoSave',
+  'Recent vibe signals could not be loaded on this device.': 'errors.recentVibesLoad',
+  'Recent vibe signals could not be saved on this device.': 'errors.recentVibesSave',
 };
 
 const EXPENSE_CATEGORY_KEYS = {
