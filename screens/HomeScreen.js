@@ -26,6 +26,12 @@ import getDisplayImageUri from '../utils/imageSources.js';
 import { cleanupOwnedJourneyPhoto, copyPersonalJourneyPhoto } from '../utils/journeyPhotoStorage.js';
 import normalizePhotoPickerResult from '../utils/photoPicker.js';
 import getExpenseInsights from '../utils/expenseInsights.js';
+import { addExpense, deleteExpense, updateExpense } from '../utils/expenses.js';
+import {
+  deriveDreamMemoryDestinationIds,
+  getDestinationJourneyPrefill,
+  isJourneyIdentityField,
+} from '../utils/journeyDestination.js';
 import {
   normalizePhotoPaletteSuggestion,
   resolvePhotoPalette,
@@ -35,10 +41,13 @@ import {
 const ACTIVE_THEME_KEY = '@wanderlust_palette/active_theme';
 const DEFAULT_THEME = mockData[0]?.palette[0] || '#F7FAFC';
 const EMPTY_FORM = { destination: '', country: '', date: '', notes: '' };
+const EMPTY_EXPENSE_FORM = { amount: '', category: '', id: '' };
 
 export default function HomeScreen() {
   const {
     clearLanguageError,
+    formatCountry,
+    formatDestination,
     formatExpenseCategory,
     languageError,
     locale,
@@ -54,6 +63,7 @@ export default function HomeScreen() {
   const [selectedId, setSelectedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [formDestinationId, setFormDestinationId] = useState('');
   const [formErrors, setFormErrors] = useState({});
   const [pendingDurablePhoto, setPendingDurablePhoto] = useState(null);
   const pendingDurablePhotoRef = useRef(null);
@@ -70,6 +80,8 @@ export default function HomeScreen() {
   const [section, setSection] = useState('discover');
   const [favouriteIds, setFavouriteIds] = useState([]);
   const [dreamStorageError, setDreamStorageError] = useState('');
+  const [expenseForm, setExpenseForm] = useState(null);
+  const [expenseErrors, setExpenseErrors] = useState({});
 
   useEffect(() => {
     let isMounted = true;
@@ -102,6 +114,10 @@ export default function HomeScreen() {
   }, []);
 
   const selectedJourney = journeys.find((journey) => journey.id === selectedId) || null;
+  const memoryDestinationIds = useMemo(
+    () => deriveDreamMemoryDestinationIds(favouriteIds, journeys),
+    [favouriteIds, journeys],
+  );
   const textColor = getContrastColor(activeTheme);
   const resetScrollPosition = useCallback(() => {
     scrollViewRef.current?.scrollTo({ animated: false, y: 0 });
@@ -142,18 +158,30 @@ export default function HomeScreen() {
     setSelectedId(null);
     setEditingId(null);
     setFormErrors({});
+    setExpenseForm(null);
+    setExpenseErrors({});
   };
 
   const openDetail = (journey) => {
     setSelectedId(journey.id);
+    setExpenseForm(null);
+    setExpenseErrors({});
     setScreen('detail');
   };
 
-  const openAddForm = () => {
+  const openAddForm = (prefill = null) => {
+    const previousStagedPhoto = pendingDurablePhotoRef.current;
+    pendingDurablePhotoRef.current = null;
+    if (previousStagedPhoto) cleanupOwnedJourneyPhoto(previousStagedPhoto);
     const journeyId = createLocalJourneyId();
     setEditingId(null);
     setDraftJourneyId(journeyId);
-    setForm(EMPTY_FORM);
+    setForm({
+      ...EMPTY_FORM,
+      country: prefill?.country || '',
+      destination: prefill?.destination || '',
+    });
+    setFormDestinationId(prefill?.destinationId || '');
     setFormPalette([]);
     setPhotoPaletteSuggestion([]);
     setPaletteFeedback('');
@@ -161,10 +189,18 @@ export default function HomeScreen() {
     paletteHasManualEditsRef.current = false;
     setFormErrors({});
     setPendingDurablePhoto(null);
-    pendingDurablePhotoRef.current = null;
     setPhotoExtractionRequest(null);
     setPhotoFeedback('');
+    setExpenseForm(null);
+    setExpenseErrors({});
     setScreen('form');
+  };
+
+  const openAddFormForDestination = (destinationId) => {
+    const prefill = getDestinationJourneyPrefill(destinationId);
+    if (!prefill) return;
+    setSection('journeys');
+    openAddForm(prefill);
   };
 
   const openEditForm = (journey) => {
@@ -176,6 +212,7 @@ export default function HomeScreen() {
       date: journey.date,
       notes: journey.notes,
     });
+    setFormDestinationId(journey.destinationId || '');
     setFormPalette(journey.palette);
     setPhotoPaletteSuggestion([]);
     setPaletteFeedback('');
@@ -186,6 +223,8 @@ export default function HomeScreen() {
     pendingDurablePhotoRef.current = null;
     setPhotoExtractionRequest(null);
     setPhotoFeedback('');
+    setExpenseForm(null);
+    setExpenseErrors({});
     setScreen('form');
   };
 
@@ -302,7 +341,11 @@ export default function HomeScreen() {
       setFormErrors((current) => ({ ...current, palette: 'invalid' }));
       return;
     }
-    const journeyInput = { ...form, palette: paletteValidation.palette };
+    const journeyInput = {
+      ...form,
+      destinationId: formDestinationId,
+      palette: paletteValidation.palette,
+    };
     const newJourneyId = editingId || draftJourneyId || createLocalJourneyId();
     const durablePhoto = pendingDurablePhoto;
     let result = editingId
@@ -354,7 +397,87 @@ export default function HomeScreen() {
     setPhotoPaletteSuggestion([]);
     setPaletteFeedback('');
     setPhotoFeedback('');
+    setFormDestinationId('');
     setScreen('detail');
+  };
+
+  const startAddExpense = () => {
+    setExpenseForm(EMPTY_EXPENSE_FORM);
+    setExpenseErrors({});
+  };
+
+  const startEditExpense = (expense) => {
+    setExpenseForm({
+      amount: String(expense.amount),
+      category: expense.category,
+      id: expense.id,
+    });
+    setExpenseErrors({});
+  };
+
+  const updateExpenseField = (field, value) => {
+    setExpenseForm((current) => ({ ...current, [field]: value }));
+    setExpenseErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
+  };
+
+  const cancelExpenseForm = () => {
+    setExpenseForm(null);
+    setExpenseErrors({});
+  };
+
+  const saveExpense = async () => {
+    if (!selectedJourney || !expenseForm) return;
+    const result = expenseForm.id
+      ? updateExpense(selectedJourney.expenses, expenseForm.id, expenseForm)
+      : addExpense(selectedJourney.expenses, expenseForm);
+    if (Object.keys(result.errors).length > 0) {
+      setExpenseErrors(result.errors);
+      return;
+    }
+    if (expenseForm.id && !result.found) {
+      setExpenseErrors({ form: 'This expense is no longer available.' });
+      return;
+    }
+    const journeyResult = updateJourney(journeys, selectedJourney.id, {
+      ...selectedJourney,
+      expenses: result.expenses,
+    });
+    if (!journeyResult.journey) {
+      setExpenseErrors({ form: 'This journey is no longer available.' });
+      return;
+    }
+    const persistence = await persistJourneys(journeyResult.journeys);
+    if (!persistence.ok) {
+      setExpenseErrors({ form: persistence.error });
+      return;
+    }
+    cancelExpenseForm();
+  };
+
+  const requestDeleteExpense = (expense) => {
+    if (!selectedJourney) return;
+    Alert.alert(
+      t('expenses.deleteTitle'),
+      t('expenses.deleteMessage', { amount: formatAmount(expense.amount), category: expense.category }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          style: 'destructive',
+          onPress: async () => {
+            const result = deleteExpense(selectedJourney.expenses, expense.id);
+            if (!result.deleted) return;
+            const journeyResult = updateJourney(journeys, selectedJourney.id, {
+              ...selectedJourney,
+              expenses: result.expenses,
+            });
+            if (!journeyResult.journey) return;
+            const persistence = await persistJourneys(journeyResult.journeys);
+            if (persistence.ok && expenseForm?.id === expense.id) cancelExpenseForm();
+          },
+        },
+      ],
+    );
   };
 
   const requestDelete = (journey) => {
@@ -379,6 +502,7 @@ export default function HomeScreen() {
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
+    if (isJourneyIdentityField(field)) setFormDestinationId('');
     setFormErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
   };
 
@@ -447,6 +571,73 @@ export default function HomeScreen() {
     );
   };
 
+  const renderExpenseManager = (journey) => (
+    <View style={styles.expenseManager}>
+      <View style={styles.expenseManagerHeader}>
+        <View style={styles.expenseManagerCopy}>
+          <Text style={styles.expenseManagerTitle}>{t('expenses.listTitle')}</Text>
+          <Text style={styles.expenseManagerSubtitle}>{t('expenses.listHelp')}</Text>
+        </View>
+        {!expenseForm ? (
+          <Pressable accessibilityRole="button" onPress={startAddExpense} style={styles.compactButton}>
+            <Text style={styles.compactButtonText}>{t('expenses.add')}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      {journey.expenses.length ? journey.expenses.map((expense) => (
+        <View key={expense.id} style={styles.expenseItem}>
+          <View style={styles.expenseItemCopy}>
+            <Text style={styles.expenseItemCategory}>{formatExpenseCategory(expense.category)}</Text>
+            <Text style={styles.expenseItemAmount}>{formatAmount(expense.amount)}</Text>
+          </View>
+          <View style={styles.expenseItemActions}>
+            <Pressable accessibilityLabel={t('expenses.editA11y', { category: expense.category })} accessibilityRole="button" onPress={() => startEditExpense(expense)} style={styles.smallActionButton}>
+              <Text style={styles.smallActionText}>{t('common.edit')}</Text>
+            </Pressable>
+            <Pressable accessibilityLabel={t('expenses.deleteA11y', { category: expense.category })} accessibilityRole="button" onPress={() => requestDeleteExpense(expense)} style={[styles.smallActionButton, styles.smallDeleteButton]}>
+              <Text style={styles.smallDeleteText}>{t('common.delete')}</Text>
+            </Pressable>
+          </View>
+        </View>
+      )) : <Text style={styles.expenseEmpty}>{t('expenses.noEntries')}</Text>}
+      {expenseForm ? (
+        <View style={styles.expenseEditor}>
+          <Text style={styles.expenseEditorTitle}>{t(expenseForm.id ? 'expenses.editTitle' : 'expenses.addTitle')}</Text>
+          <Text style={styles.label}>{t('expenses.category')}</Text>
+          <TextInput
+            accessibilityLabel={t('expenses.category')}
+            autoCorrect={false}
+            maxLength={80}
+            onChangeText={(value) => updateExpenseField('category', value)}
+            placeholder={t('expenses.categoryPlaceholder')}
+            style={[styles.input, expenseErrors.category && styles.inputError]}
+            value={expenseForm.category}
+          />
+          {expenseErrors.category ? <Text style={styles.errorText}>{localizeMessage(expenseErrors.category)}</Text> : null}
+          <Text style={[styles.label, styles.expenseAmountLabel]}>{t('expenses.amount')}</Text>
+          <TextInput
+            accessibilityLabel={t('expenses.amount')}
+            keyboardType="decimal-pad"
+            onChangeText={(value) => updateExpenseField('amount', value)}
+            placeholder={t('expenses.amountPlaceholder')}
+            style={[styles.input, expenseErrors.amount && styles.inputError]}
+            value={expenseForm.amount}
+          />
+          {expenseErrors.amount ? <Text style={styles.errorText}>{localizeMessage(expenseErrors.amount)}</Text> : null}
+          {expenseErrors.form ? <Text style={styles.errorText}>{localizeMessage(expenseErrors.form)}</Text> : null}
+          <View style={styles.expenseEditorActions}>
+            <Pressable accessibilityRole="button" onPress={cancelExpenseForm} style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>{t('common.cancel')}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={saveExpense} style={styles.primaryButtonFlex}>
+              <Text style={styles.primaryButtonText}>{t(expenseForm.id ? 'expenses.saveChanges' : 'expenses.save')}</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
+
   const renderList = () => (
     <>
       <View style={styles.headerRow}>
@@ -455,7 +646,7 @@ export default function HomeScreen() {
           <Text style={[styles.title, { color: textColor }]}>{t('journeys.title')}</Text>
           <Text style={[styles.subtitle, { color: textColor }]}>{t('journeys.subtitle')}</Text>
         </View>
-        <Pressable accessibilityRole="button" onPress={openAddForm} style={styles.primaryButton}>
+        <Pressable accessibilityRole="button" onPress={() => openAddForm()} style={styles.primaryButton}>
           <Text style={styles.primaryButtonText}>{t('journeys.add')}</Text>
         </Pressable>
       </View>
@@ -464,7 +655,7 @@ export default function HomeScreen() {
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>{t('journeys.emptyTitle')}</Text>
           <Text style={styles.emptyCopy}>{t('journeys.emptyCopy')}</Text>
-          <Pressable onPress={openAddForm} style={styles.primaryButton}>
+          <Pressable onPress={() => openAddForm()} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>{t('journeys.addJourney')}</Text>
           </Pressable>
         </View>
@@ -516,6 +707,7 @@ export default function HomeScreen() {
           <Text style={styles.detailCountry}>{selectedJourney.country}</Text>
           <Text style={styles.detailNotes}>{selectedJourney.notes || t('journeys.noNotes')}</Text>
           {renderPalette(selectedJourney)}
+          {renderExpenseManager(selectedJourney)}
           {renderExpenseSummary(selectedJourney)}
           <View style={styles.actionRow}>
             <Pressable onPress={() => openEditForm(selectedJourney)} style={styles.secondaryButton}>
@@ -553,6 +745,17 @@ export default function HomeScreen() {
       <View style={styles.formCard}>
         <Text style={styles.formTitle}>{editingId ? t('journeys.editTitle') : t('journeys.addTitle')}</Text>
         <Text style={styles.formSubtitle}>{t('journeys.required')}</Text>
+        {formDestinationId ? (() => {
+          const linked = getDestinationJourneyPrefill(formDestinationId);
+          return linked ? (
+            <Text style={styles.linkedDestination}>
+              {t('journeys.linkedDestination', {
+                country: formatCountry(linked.countryCode, linked.country),
+                destination: formatDestination(linked.destinationId, linked.destination),
+              })}
+            </Text>
+          ) : null;
+        })() : null}
         {renderField('destination', t('journeys.destination'), { placeholder: t('journeys.destinationPlaceholder') })}
         {renderField('country', t('journeys.country'), { placeholder: t('journeys.countryPlaceholder') })}
         {renderField('date', t('journeys.date'), { placeholder: t('journeys.datePlaceholder') })}
@@ -696,7 +899,9 @@ export default function HomeScreen() {
       {section === 'discover' || section === 'dream' ? (
         <SignatureScreen
           favouriteIds={favouriteIds}
+          memoryDestinationIds={memoryDestinationIds}
           mode={section}
+          onAddJourney={openAddFormForDestination}
           onDestinationChange={resetScrollPosition}
           onRecommendationReady={scrollToDiscoveryResults}
           onSelectTheme={selectTheme}
@@ -767,6 +972,27 @@ const styles = StyleSheet.create({
   expenseAmount: { color: '#17202A', fontSize: 13, fontWeight: '900' },
   expenseNote: { color: '#667085', fontSize: 11, lineHeight: 16, marginTop: 14 },
   expenseEmpty: { color: '#667085', fontSize: 13, lineHeight: 19 },
+  expenseManager: { borderColor: '#DCE4E8', borderRadius: 8, borderWidth: 1, marginTop: 24, padding: 16 },
+  expenseManagerHeader: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
+  expenseManagerCopy: { flex: 1 },
+  expenseManagerTitle: { color: '#17202A', fontSize: 18, fontWeight: '900' },
+  expenseManagerSubtitle: { color: '#667085', fontSize: 12, lineHeight: 17, marginTop: 3 },
+  compactButton: { backgroundColor: '#17202A', borderRadius: 7, minHeight: 42, paddingHorizontal: 13, paddingVertical: 11 },
+  compactButtonText: { color: '#FFFFFF', fontSize: 12, fontWeight: '800' },
+  expenseItem: { alignItems: 'center', borderTopColor: '#E4E9EC', borderTopWidth: 1, flexDirection: 'row', gap: 10, justifyContent: 'space-between', marginTop: 14, paddingTop: 14 },
+  expenseItemCopy: { flex: 1 },
+  expenseItemCategory: { color: '#344054', fontSize: 14, fontWeight: '800' },
+  expenseItemAmount: { color: '#17202A', fontSize: 18, fontWeight: '900', marginTop: 2 },
+  expenseItemActions: { flexDirection: 'row', gap: 7 },
+  smallActionButton: { alignItems: 'center', backgroundColor: '#E8EEF2', borderRadius: 6, justifyContent: 'center', minHeight: 40, minWidth: 52, paddingHorizontal: 9 },
+  smallActionText: { color: '#17202A', fontSize: 11, fontWeight: '800' },
+  smallDeleteButton: { backgroundColor: '#FDECEC' },
+  smallDeleteText: { color: '#A61B1B', fontSize: 11, fontWeight: '800' },
+  expenseEditor: { backgroundColor: '#F4F7F8', borderRadius: 8, marginTop: 16, padding: 14 },
+  expenseEditorTitle: { color: '#17202A', fontSize: 16, fontWeight: '900', marginBottom: 14 },
+  expenseAmountLabel: { marginTop: 14 },
+  expenseEditorActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  primaryButtonFlex: { alignItems: 'center', backgroundColor: '#17202A', borderRadius: 8, flex: 1, padding: 13 },
   actionRow: { flexDirection: 'row', gap: 12, marginTop: 28 },
   secondaryButton: { alignItems: 'center', backgroundColor: '#E8EEF2', borderRadius: 8, flex: 1, padding: 13 },
   secondaryButtonText: { color: '#17202A', fontWeight: '700' },
@@ -775,6 +1001,7 @@ const styles = StyleSheet.create({
   formCard: { backgroundColor: '#FFFFFF', borderRadius: 8, padding: 22 },
   formTitle: { color: '#17202A', fontSize: 30, fontWeight: '800' },
   formSubtitle: { color: '#667085', fontSize: 14, marginBottom: 22, marginTop: 6 },
+  linkedDestination: { backgroundColor: '#E8F1EC', borderRadius: 7, color: '#28533C', fontSize: 13, fontWeight: '800', marginBottom: 18, overflow: 'hidden', padding: 11 },
   field: { marginBottom: 18 },
   label: { color: '#344054', fontSize: 14, fontWeight: '700', marginBottom: 7 },
   input: { backgroundColor: '#FFFFFF', borderColor: '#CBD5E0', borderRadius: 8, borderWidth: 1, color: '#17202A', fontSize: 16, paddingHorizontal: 12, paddingVertical: 11 },

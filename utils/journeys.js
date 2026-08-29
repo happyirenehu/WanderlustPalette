@@ -1,3 +1,6 @@
+import { normalizeExpenses } from './expenses';
+import { normalizeJourneyDestinationId } from './journeyDestination';
+
 const EMPTY_TEXT = '';
 
 function cleanText(value) {
@@ -8,10 +11,6 @@ function normalizePalette(value) {
   return Array.isArray(value)
     ? value.filter((color) => typeof color === 'string' && color.trim()).map((color) => color.trim())
     : [];
-}
-
-function normalizeExpenses(value) {
-  return Array.isArray(value) ? value.filter((expense) => expense && typeof expense === 'object') : [];
 }
 
 function normalizeImageSource(value, imageUri) {
@@ -56,11 +55,13 @@ export function normalizeJourney(value, fallbackId = EMPTY_TEXT) {
   const createdAt = cleanText(value.createdAt) || `${date}T00:00:00.000Z`;
   const updatedAt = cleanText(value.updatedAt) || createdAt;
   const imageUri = cleanText(value.imageUri);
+  const destinationId = normalizeJourneyDestinationId(value.destinationId);
 
   return {
     id,
     destination,
     country,
+    ...(destinationId ? { destinationId } : {}),
     date,
     notes: cleanText(value.notes) || cleanText(value.description),
     imageUri,
@@ -109,6 +110,8 @@ export function addJourney(journeys, input, options = {}) {
     id,
     imageSource: input.imageSource,
     imageUri: input.imageUri,
+    destinationId: input.destinationId,
+    expenses: input.expenses,
     palette: input.palette,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -129,11 +132,15 @@ export function updateJourney(journeys, id, input, timestamp = new Date().toISOS
 
   const hasPhotoUpdate = Object.prototype.hasOwnProperty.call(input, 'imageUri');
   const hasPaletteUpdate = Object.prototype.hasOwnProperty.call(input, 'palette');
+  const hasDestinationIdUpdate = Object.prototype.hasOwnProperty.call(input, 'destinationId');
+  const hasExpensesUpdate = Object.prototype.hasOwnProperty.call(input, 'expenses');
   const journey = normalizeJourney({
     ...currentJourneys[targetIndex],
     ...validation.values,
     ...(hasPhotoUpdate ? { imageSource: input.imageSource, imageUri: input.imageUri } : {}),
     ...(hasPaletteUpdate ? { palette: input.palette } : {}),
+    ...(hasDestinationIdUpdate ? { destinationId: input.destinationId } : {}),
+    ...(hasExpensesUpdate ? { expenses: input.expenses } : {}),
     updatedAt: timestamp,
   });
   const nextJourneys = currentJourneys.slice();

@@ -13,10 +13,20 @@ import { applyBudgetPreference, BUDGET_LEVELS } from '../utils/budget.js';
 import { getRelatedDestinations, getVibeById, normalizeDestinations, normalizeVibes, recommendDestinations, recommendDestinationsByColor, resolveDestinationIds } from '../utils/discovery.js';
 import getDreamPaletteInsights from '../utils/destinationInsights.js';
 import { isFavouriteId } from '../utils/dreamPalette.js';
+import { isDreamMemoryDestination } from '../utils/journeyDestination.js';
 
 const FALLBACK_COLOR = '#E8EEF2';
 
-export default function SignatureScreen({ mode, favouriteIds, onDestinationChange, onRecommendationReady, onSelectTheme, onToggleFavourite }) {
+export default function SignatureScreen({
+  mode,
+  favouriteIds,
+  memoryDestinationIds,
+  onAddJourney,
+  onDestinationChange,
+  onRecommendationReady,
+  onSelectTheme,
+  onToggleFavourite,
+}) {
   const { formatCapital, formatCountry, formatDestination, formatIncome, formatRegion, locale, t } = useLanguage();
   const vibes = useMemo(() => normalizeVibes(vibesData).map((vibe) => ({
     ...vibe,
@@ -121,14 +131,19 @@ export default function SignatureScreen({ mode, favouriteIds, onDestinationChang
 
   const renderDestinationCard = (destination, compact = false) => {
     const saved = isFavouriteId(favouriteIds, destination.id);
+    const becameMemory = mode === 'dream' && isDreamMemoryDestination(memoryDestinationIds, destination.id);
     return (
-      <Pressable accessibilityHint={t('discovery.destinationHint')} accessibilityLabel={`${destination.name}, ${destination.country}${saved ? `, ${t('discovery.savedToDream')}` : ''}`} accessibilityRole="button" key={destination.id} onPress={() => setSelectedDestinationId(destination.id)} style={({ pressed }) => [styles.destinationCard, compact && styles.compactCard, pressed && styles.pressedCard]}>
+      <Pressable accessibilityHint={t('discovery.destinationHint')} accessibilityLabel={`${destination.name}, ${destination.country}${saved ? `, ${t('discovery.savedToDream')}` : ''}${becameMemory ? `, ${t('dream.becameMemory')}` : ''}`} accessibilityRole="button" key={destination.id} onPress={() => setSelectedDestinationId(destination.id)} style={({ pressed }) => [styles.destinationCard, compact && styles.compactCard, pressed && styles.pressedCard]}>
         <DestinationImage destination={destination} />
         <View style={styles.destinationBody}>
           <View style={styles.destinationHeading}>
             <View style={styles.destinationCopy}><Text style={styles.eyebrow}>{destination.colorFamily || t('discovery.curatedColorStory')}</Text><Text style={[styles.destinationName, compact && styles.compactName]}>{destination.name}</Text><Text style={styles.destinationCountry}>{destination.country}</Text></View>
-            {saved ? <Text style={styles.savedBadge}>{t('common.saved')}</Text> : null}
+            <View style={styles.badgeColumn}>
+              {saved ? <Text style={styles.savedBadge}>{t('common.saved')}</Text> : null}
+              {becameMemory ? <Text style={styles.memoryBadge}>{t('dream.memory')}</Text> : null}
+            </View>
           </View>
+          {becameMemory ? <Text style={styles.memoryMessage}>{t('dream.becameMemory')}</Text> : null}
           {!compact ? <><Text style={styles.destinationDescription}>{destination.description}</Text>{renderPalette(destination.palette, destination.name)}</> : null}
         </View>
       </Pressable>
@@ -141,6 +156,7 @@ export default function SignatureScreen({ mode, favouriteIds, onDestinationChang
     const destinationColors = colors.filter((color) => selectedDestination.colorIds.includes(color.id));
     const related = getRelatedDestinations(selectedDestination.id, destinations);
     const saved = isFavouriteId(favouriteIds, selectedDestination.id);
+    const becameMemory = mode === 'dream' && isDreamMemoryDestination(memoryDestinationIds, selectedDestination.id);
     const capitalDisplay = countryFacts?.capitalCity
       ? formatCapital(selectedDestination.countryCode, countryFacts.capitalCity)
       : '';
@@ -152,6 +168,7 @@ export default function SignatureScreen({ mode, favouriteIds, onDestinationChang
           <DestinationImage destination={selectedDestination} detail />
           <View style={styles.detailBody}>
             <Text style={styles.detailKicker}>{t('discovery.curatedDestination')}</Text><Text style={styles.detailTitle}>{selectedDestination.name}</Text><Text style={styles.detailCountry}>{selectedDestination.country}</Text>
+            {becameMemory ? <Text style={styles.detailMemoryMessage}>{t('dream.becameMemory')}</Text> : null}
             <Text style={styles.vibeLine}>{destinationVibes.map((vibe) => vibe.name).join(' · ')}</Text><Text style={styles.detailDescription}>{selectedDestination.description}</Text>
             <Text style={styles.detailSectionTitle}>{t('discovery.colorStoryTitle')}</Text><Text style={styles.detailDescription}>{destinationColors.map((color) => color.name).join(' · ') || selectedDestination.colorFamily}</Text>
             <Text style={styles.detailSectionTitle}>{t('discovery.whyItMatches')}</Text><Text style={styles.detailDescription}>{selectedDestination.whyItMatches}</Text>
@@ -170,6 +187,7 @@ export default function SignatureScreen({ mode, favouriteIds, onDestinationChang
               {incomeDisplay ? <><Text style={styles.factLabel}>{t('snapshot.incomeLevel')}</Text><Text style={styles.factValue}>{incomeDisplay}</Text><Text style={styles.sourceNote}>{t('snapshot.source')}</Text></> : null}
             </View>
             <Pressable accessibilityLabel={t('discovery.saveDreamA11y', { action: saved ? t('common.remove') : t('common.save'), direction: saved ? t('discovery.removeDirection') : t('discovery.addDirection'), name: selectedDestination.name })} accessibilityRole="button" onPress={() => onToggleFavourite(selectedDestination.id)} style={[styles.saveButton, saved && styles.removeButton]}><Text style={[styles.saveButtonText, saved && styles.removeButtonText]}>{saved ? t('discovery.removeFromDream') : t('discovery.saveToDream')}</Text></Pressable>
+            <Pressable accessibilityLabel={t('discovery.addJourneyA11y', { name: selectedDestination.name })} accessibilityRole="button" onPress={() => onAddJourney?.(selectedDestination.id)} style={styles.addJourneyButton}><Text style={styles.addJourneyButtonText}>{t('discovery.addToJourney')}</Text></Pressable>
             {selectedDestination.imageCredit ? <Pressable accessibilityRole="link" onPress={() => selectedDestination.imageAttributionUrl && Linking.openURL(selectedDestination.imageAttributionUrl)}><Text style={styles.credit}>{selectedDestination.imageCredit}</Text></Pressable> : null}
           </View>
         </View>
@@ -224,9 +242,9 @@ const styles = StyleSheet.create({
   colorChoiceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }, colorChoice: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#D0D5DD', borderRadius: 8, borderWidth: 1, flexBasis: '30%', flexGrow: 1, padding: 9 }, colorChoiceSelected: { borderColor: '#17202A', borderWidth: 2, padding: 8 }, colorDot: { borderColor: '#FFFFFF', borderRadius: 16, borderWidth: 2, height: 30, width: 30 }, colorName: { color: '#17202A', fontSize: 12, fontWeight: '900', marginTop: 6, textAlign: 'center' }, colorAction: { color: '#667085', fontSize: 9, fontWeight: '800', marginTop: 3, textAlign: 'center' },
   budgetSection: { marginBottom: 20 }, budgetTitle: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 1.2, marginBottom: 8 }, budgetControls: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 }, budgetButton: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#D0D5DD', borderRadius: 7, borderWidth: 1, flexGrow: 1, paddingHorizontal: 8, paddingVertical: 8 }, budgetButtonSelected: { backgroundColor: '#17202A', borderColor: '#17202A' }, budgetButtonText: { color: '#667085', fontSize: 10, fontWeight: '800' }, budgetButtonTextSelected: { color: '#FFFFFF' },
   identityCard: { borderRadius: 10, marginBottom: 24, padding: 20 }, identityTitle: { color: '#17202A', fontSize: 30, fontWeight: '800', marginTop: 5 }, identityDescription: { color: '#344054', fontSize: 14, lineHeight: 21, marginTop: 7 }, resultsTitle: { color: '#17202A', fontSize: 22, fontWeight: '800', marginBottom: 14 },
-  destinationCard: { backgroundColor: '#FFFFFF', borderRadius: 10, elevation: 3, marginBottom: 20, overflow: 'hidden', shadowColor: '#000000', shadowOffset: { height: 4, width: 0 }, shadowOpacity: 0.12, shadowRadius: 10 }, compactCard: { marginBottom: 14 }, pressedCard: { opacity: 0.88 }, destinationBody: { padding: 18 }, destinationHeading: { alignItems: 'flex-start', flexDirection: 'row', gap: 10, justifyContent: 'space-between' }, destinationCopy: { flex: 1 }, destinationName: { color: '#17202A', fontSize: 28, fontWeight: '800', marginTop: 5 }, compactName: { fontSize: 22 }, destinationCountry: { color: '#667085', fontSize: 14, fontWeight: '600', marginTop: 1 }, destinationDescription: { color: '#4B5563', fontSize: 14, lineHeight: 21, marginTop: 12 }, savedBadge: { backgroundColor: '#E8F1EC', borderRadius: 5, color: '#28533C', fontSize: 10, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 5 },
+  destinationCard: { backgroundColor: '#FFFFFF', borderRadius: 10, elevation: 3, marginBottom: 20, overflow: 'hidden', shadowColor: '#000000', shadowOffset: { height: 4, width: 0 }, shadowOpacity: 0.12, shadowRadius: 10 }, compactCard: { marginBottom: 14 }, pressedCard: { opacity: 0.88 }, destinationBody: { padding: 18 }, destinationHeading: { alignItems: 'flex-start', flexDirection: 'row', gap: 10, justifyContent: 'space-between' }, destinationCopy: { flex: 1 }, destinationName: { color: '#17202A', fontSize: 28, fontWeight: '800', marginTop: 5 }, compactName: { fontSize: 22 }, destinationCountry: { color: '#667085', fontSize: 14, fontWeight: '600', marginTop: 1 }, destinationDescription: { color: '#4B5563', fontSize: 14, lineHeight: 21, marginTop: 12 }, badgeColumn: { alignItems: 'flex-end', gap: 6 }, savedBadge: { backgroundColor: '#E8F1EC', borderRadius: 5, color: '#28533C', fontSize: 10, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 5 }, memoryBadge: { backgroundColor: '#F3EAF7', borderRadius: 5, color: '#68427A', fontSize: 10, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 5 }, memoryMessage: { color: '#68427A', fontSize: 13, fontWeight: '800', marginTop: 12 },
   paletteRow: { flexDirection: 'row', gap: 8, marginTop: 16 }, swatch: { borderColor: '#FFFFFF', borderRadius: 5, borderWidth: 2, flex: 1, height: 34 }, emptyCard: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 10, padding: 28 }, emptyTitle: { color: '#17202A', fontSize: 22, fontWeight: '800', textAlign: 'center' }, emptyCopy: { color: '#667085', fontSize: 14, lineHeight: 21, marginTop: 8, textAlign: 'center' },
-  backButton: { alignSelf: 'flex-start', backgroundColor: '#FFFFFF', borderRadius: 8, marginBottom: 14, paddingHorizontal: 14, paddingVertical: 10 }, backButtonText: { color: '#17202A', fontSize: 14, fontWeight: '800' }, detailCard: { backgroundColor: '#FFFFFF', borderRadius: 10, overflow: 'hidden' }, detailBody: { padding: 22 }, detailKicker: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 1.5 }, detailTitle: { color: '#17202A', fontSize: 38, fontWeight: '900', marginTop: 5 }, detailCountry: { color: '#667085', fontSize: 17, fontWeight: '600', marginTop: 2 }, vibeLine: { color: '#8D4F5B', fontSize: 12, fontWeight: '900', letterSpacing: 1, marginTop: 18, textTransform: 'uppercase' }, detailDescription: { color: '#4B5563', fontSize: 15, lineHeight: 23, marginTop: 9 }, detailSectionTitle: { color: '#17202A', fontSize: 17, fontWeight: '800', marginTop: 22 },
-  snapshot: { backgroundColor: '#F4F7F8', borderRadius: 8, marginTop: 24, padding: 16 }, snapshotRegion: { color: '#17202A', fontSize: 21, fontWeight: '900', marginBottom: 14, marginTop: 5 }, factLabel: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 0.8, marginTop: 12, textTransform: 'uppercase' }, factValue: { color: '#17202A', fontSize: 15, fontWeight: '700', marginTop: 3 }, sourceNote: { color: '#667085', fontSize: 10, marginTop: 3 }, saveButton: { alignItems: 'center', backgroundColor: '#17202A', borderRadius: 8, marginTop: 26, padding: 14 }, saveButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' }, removeButton: { backgroundColor: '#FDECEC', borderColor: '#D92D20', borderWidth: 1 }, removeButtonText: { color: '#A61B1B' }, credit: { color: '#667085', fontSize: 11, marginTop: 14, textAlign: 'center', textDecorationLine: 'underline' }, relatedSection: { marginTop: 26 },
+  backButton: { alignSelf: 'flex-start', backgroundColor: '#FFFFFF', borderRadius: 8, marginBottom: 14, paddingHorizontal: 14, paddingVertical: 10 }, backButtonText: { color: '#17202A', fontSize: 14, fontWeight: '800' }, detailCard: { backgroundColor: '#FFFFFF', borderRadius: 10, overflow: 'hidden' }, detailBody: { padding: 22 }, detailKicker: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 1.5 }, detailTitle: { color: '#17202A', fontSize: 38, fontWeight: '900', marginTop: 5 }, detailCountry: { color: '#667085', fontSize: 17, fontWeight: '600', marginTop: 2 }, detailMemoryMessage: { backgroundColor: '#F3EAF7', borderRadius: 7, color: '#68427A', fontSize: 14, fontWeight: '800', marginTop: 16, overflow: 'hidden', padding: 12 }, vibeLine: { color: '#8D4F5B', fontSize: 12, fontWeight: '900', letterSpacing: 1, marginTop: 18, textTransform: 'uppercase' }, detailDescription: { color: '#4B5563', fontSize: 15, lineHeight: 23, marginTop: 9 }, detailSectionTitle: { color: '#17202A', fontSize: 17, fontWeight: '800', marginTop: 22 },
+  snapshot: { backgroundColor: '#F4F7F8', borderRadius: 8, marginTop: 24, padding: 16 }, snapshotRegion: { color: '#17202A', fontSize: 21, fontWeight: '900', marginBottom: 14, marginTop: 5 }, factLabel: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 0.8, marginTop: 12, textTransform: 'uppercase' }, factValue: { color: '#17202A', fontSize: 15, fontWeight: '700', marginTop: 3 }, sourceNote: { color: '#667085', fontSize: 10, marginTop: 3 }, saveButton: { alignItems: 'center', backgroundColor: '#17202A', borderRadius: 8, marginTop: 26, padding: 14 }, saveButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' }, removeButton: { backgroundColor: '#FDECEC', borderColor: '#D92D20', borderWidth: 1 }, removeButtonText: { color: '#A61B1B' }, addJourneyButton: { alignItems: 'center', backgroundColor: '#E8EEF2', borderRadius: 8, marginTop: 10, padding: 14 }, addJourneyButtonText: { color: '#17202A', fontSize: 14, fontWeight: '800' }, credit: { color: '#667085', fontSize: 11, marginTop: 14, textAlign: 'center', textDecorationLine: 'underline' }, relatedSection: { marginTop: 26 },
   insightsCard: { backgroundColor: '#FFFFFF', borderRadius: 10, marginBottom: 20, padding: 22 }, insightCount: { color: '#17202A', fontSize: 28, fontWeight: '900', marginTop: 7 }, insightLabel: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 1.2, marginTop: 18 }, insightValue: { color: '#8D4F5B', fontSize: 20, fontWeight: '800', marginTop: 3 }, budgetMixRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }, budgetMixLabel: { color: '#344054', fontSize: 13, fontWeight: '700' }, budgetMixCount: { color: '#17202A', fontSize: 13, fontWeight: '900' }, insightNote: { color: '#667085', fontSize: 12, marginTop: 18 }, darkButton: { backgroundColor: '#17202A', borderRadius: 8, marginTop: 18, paddingHorizontal: 18, paddingVertical: 12 }, darkButtonText: { color: '#FFFFFF', fontWeight: '800' },
 });

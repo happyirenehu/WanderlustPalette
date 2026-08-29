@@ -42,6 +42,8 @@ describe('localization lookup and fallback', () => {
   test('interpolates current simple parameters deterministically', () => {
     expect(translate('en', 'dream.savedPlaceOther', { count: 3 })).toBe('3 saved places');
     expect(translate('zh-Hant', 'dream.savedPlaceOther', { count: 3 })).toBe('已收藏 3 個地方');
+    expect(translate('en', 'dream.becameMemory')).toBe('A dream became a memory');
+    expect(translate('zh-Hant', 'dream.becameMemory')).toBe('夢想成為了回憶');
   });
 
   test('has complete Traditional Chinese coverage for the supported English surface', () => {

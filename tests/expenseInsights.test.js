@@ -66,4 +66,14 @@ describe('journey expense insights', () => {
     getExpenseInsights(expenses);
     expect(expenses).toEqual(copy);
   });
+
+  test('keeps derived totals rounded to cents', () => {
+    expect(getExpenseInsights([
+      { category: 'Food', amount: 0.1 },
+      { category: 'Food', amount: 0.2 },
+    ])).toMatchObject({
+      calculatedTotal: 0.3,
+      largestCategory: { amount: 0.3, category: 'Food' },
+    });
+  });
 });

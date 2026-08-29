@@ -95,6 +95,24 @@ describe('journey storage operations', () => {
     expect(loaded.journeys[0]).not.toHaveProperty('paletteSource');
   });
 
+  test('loads legacy records without destinationId and persists new linkage and expense IDs', async () => {
+    let storedValue = JSON.stringify([{ ...FALLBACK[0], expenses: [{ category: 'Food', amount: 12 }] }]);
+    mockStorage.getItem.mockImplementation(async () => storedValue);
+    mockStorage.setItem.mockImplementation(async (_key, value) => { storedValue = value; });
+
+    const legacy = await loadJourneys([], mockStorage);
+    expect(legacy.journeys[0]).not.toHaveProperty('destinationId');
+    expect(legacy.journeys[0].expenses[0].id).toBe('expense-1');
+
+    const linked = [{ ...legacy.journeys[0], destinationId: 'kyoto-japan' }];
+    await saveJourneys(linked, mockStorage);
+    const reloaded = await loadJourneys([], mockStorage);
+    expect(reloaded.journeys[0]).toMatchObject({
+      destinationId: 'kyoto-japan',
+      expenses: [{ id: 'expense-1', category: 'Food', amount: 12 }],
+    });
+  });
+
   test('reports write failures without throwing', async () => {
     mockStorage.setItem.mockRejectedValue(new Error('write failed'));
 

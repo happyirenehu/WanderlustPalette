@@ -63,7 +63,16 @@ describe('journey validation and normalization', () => {
       imageUri: 'https://example.com/lofoten.jpg',
       palette: ['#123456'],
       totalCost: 1200,
+      expenses: [{ id: 'expense-1', category: 'Food', amount: 100 }],
     });
+  });
+
+  test('preserves a known destinationId and drops unknown identifiers safely', () => {
+    expect(normalizeJourney({ ...BASE_JOURNEY, destinationId: 'kyoto-japan' }).destinationId)
+      .toBe('kyoto-japan');
+    expect(normalizeJourney({ ...BASE_JOURNEY, destinationId: 'Kyoto' }))
+      .not.toHaveProperty('destinationId');
+    expect(normalizeJourney(BASE_JOURNEY)).not.toHaveProperty('destinationId');
   });
 
   test('drops malformed or incomplete records and duplicate IDs', () => {
@@ -141,6 +150,23 @@ describe('journey CRUD transformations', () => {
       palette: ['#ABCDEF'],
       updatedAt: '2026-02-01T00:00:00.000Z',
     });
+  });
+
+  test('adds and updates destination linkage and expenses without changing manual totalCost', () => {
+    const added = addJourney([], {
+      ...BASE_JOURNEY,
+      destinationId: 'kyoto-japan',
+      expenses: [{ id: 'meal', category: 'Food', amount: 20 }],
+    }, { id: 'linked' });
+    const withManualTotal = [{ ...added.journey, totalCost: 500 }];
+    const updated = updateJourney(withManualTotal, 'linked', {
+      ...added.journey,
+      expenses: [{ id: 'meal', category: 'Food', amount: 30 }],
+    });
+
+    expect(added.journey.destinationId).toBe('kyoto-japan');
+    expect(updated.journey.expenses).toEqual([{ id: 'meal', category: 'Food', amount: 30 }]);
+    expect(updated.journey.totalCost).toBe(500);
   });
 
   test('preserves or explicitly replaces personal-photo fields during edit', () => {

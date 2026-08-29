@@ -6,6 +6,10 @@ function normalizeExpense(value, index) {
   return { amount, category, index };
 }
 
+function addMoney(first, second) {
+  return Math.round((first + second) * 100) / 100;
+}
+
 export function getExpenseInsights(expenses) {
   const validExpenses = Array.isArray(expenses)
     ? expenses.map(normalizeExpense).filter(Boolean)
@@ -13,7 +17,7 @@ export function getExpenseInsights(expenses) {
   const totals = validExpenses.reduce((result, expense) => {
     const existing = result.get(expense.category);
     if (existing) {
-      existing.amount += expense.amount;
+      existing.amount = addMoney(existing.amount, expense.amount);
       existing.count += 1;
     } else {
       result.set(expense.category, {
@@ -29,7 +33,7 @@ export function getExpenseInsights(expenses) {
   const categoryTotals = [...totals.values()]
     .sort((a, b) => b.amount - a.amount || a.firstIndex - b.firstIndex)
     .map(({ firstIndex, ...item }) => item);
-  const calculatedTotal = validExpenses.reduce((total, expense) => total + expense.amount, 0);
+  const calculatedTotal = validExpenses.reduce((total, expense) => addMoney(total, expense.amount), 0);
 
   return {
     calculatedTotal,
