@@ -30,7 +30,6 @@ export default function SignatureScreen({
   onAddJourney,
   onDestinationChange,
   onRecommendationReady,
-  onSelectTheme,
   onToggleFavourite,
   onVibeSelect,
   preferenceProfile,
@@ -94,6 +93,7 @@ export default function SignatureScreen({
   };
   const vibeName = (id) => vibes.find((vibe) => vibe.id === id)?.name || id;
   const colorName = (id) => colors.find((color) => color.id === id)?.name || id;
+  const colorHex = (id) => colors.find((color) => color.id === id)?.palette?.[0] || FALLBACK_COLOR;
   const reasonText = (reason) => {
     const presentation = getRecommendationReasonPresentation(reason);
     if (!presentation) return '';
@@ -102,6 +102,16 @@ export default function SignatureScreen({
       : colorName(presentation.subjectId);
     return t(presentation.key, { name });
   };
+  const passportComposition = (() => {
+    const representative = Array.isArray(colourPassport?.representativePalette)
+      ? colourPassport.representativePalette
+      : [];
+    const supported = [
+      colourPassport?.dream?.dominantColor?.id,
+      colourPassport?.memory?.dominantColor?.id,
+    ].filter(Boolean).map(colorHex);
+    return [...new Set([...representative, ...supported])].slice(0, 5);
+  })();
 
   useEffect(() => setSelectedDestinationId(null), [mode]);
 
@@ -140,7 +150,7 @@ export default function SignatureScreen({
   const renderPalette = (palette, label) => (
     <View accessibilityLabel={t('discovery.paletteLabel', { name: label })} style={styles.paletteRow}>
       {(palette.length ? palette : [FALLBACK_COLOR]).map((color) => (
-        <Pressable accessibilityLabel={t('discovery.useTheme', { color })} accessibilityRole="button" key={color} onPress={(event) => { event.stopPropagation(); onSelectTheme(color); }} style={[styles.swatch, { backgroundColor: color }]} />
+        <View accessibilityLabel={t('discovery.colorLabel', { name: color })} key={color} style={[styles.swatch, { backgroundColor: color }]} />
       ))}
     </View>
   );
@@ -179,7 +189,7 @@ export default function SignatureScreen({
               <Text style={styles.reasonTitle}>{t('personalization.whyTitle')}</Text>
               {personalizationReasons.map((reason, index) => {
                 const text = reasonText(reason);
-                return text ? <Text key={`${reason.type}-${index}`} style={styles.reasonText}>• {text}</Text> : null;
+                return text ? <Text key={`${reason.type}-${index}`} style={styles.reasonText}>{text}</Text> : null;
               })}
             </View>
           ) : null}
@@ -221,7 +231,7 @@ export default function SignatureScreen({
               <Text style={styles.eyebrow}>{t('snapshot.title')}</Text>
               <Text style={styles.factLabel}>{t('snapshot.region')}</Text>
               <Text style={styles.snapshotRegion}>{selectedDestination.travelRegion}</Text>
-              <Text style={styles.factLabel}>{t('snapshot.budget')}</Text><Text style={styles.factValue}>{budgetDisplay(selectedDestination.budget)}</Text>
+              <Text style={styles.factLabel}>{t('snapshot.budget')}</Text><Text style={styles.factValue}>{budgetDisplay(selectedDestination.budget)}</Text><Text style={styles.guidanceNote}>{t('snapshot.budgetGuidance')}</Text>
               {capitalDisplay ? <><Text style={styles.factLabel}>{t('snapshot.capital')}</Text><Text style={styles.factValue}>{capitalDisplay}</Text></> : null}
               {incomeDisplay ? <><Text style={styles.factLabel}>{t('snapshot.incomeLevel')}</Text><Text style={styles.factValue}>{incomeDisplay}</Text><Text style={styles.sourceNote}>{t('snapshot.source')}</Text></> : null}
             </View>
@@ -240,12 +250,35 @@ export default function SignatureScreen({
       <View style={styles.intro}><Text style={styles.eyebrow}>{t('dream.kicker')}</Text><Text style={styles.pageTitle}>{t('dream.title')}</Text><Text style={styles.pageSubtitle}>{t('dream.subtitle')}</Text></View>
       {insights.total ? <View accessibilityLabel={t('dream.insightsA11y')} style={styles.insightsCard}><Text style={styles.eyebrow}>{t('dream.styleKicker')}</Text><Text style={styles.insightCount}>{t(insights.total === 1 ? 'dream.savedPlaceOne' : 'dream.savedPlaceOther', { count: insights.total })}</Text><Text style={styles.insightLabel}>{t('dream.strongestVibe')}</Text><Text style={styles.insightValue}>{insights.dominantVibe?.name}</Text><Text style={styles.insightLabel}>{t('dream.colorStory')}</Text><Text style={styles.insightValue}>{insights.dominantColor?.name}</Text><Text style={styles.insightLabel}>{t('dream.typicalBudget')}</Text><Text style={styles.insightValue}>{insights.dominantBudget ? `${insights.dominantBudget.symbol} · ${budgetLabel(insights.dominantBudget.id)}` : t('dream.stillUnfolding')}</Text><Text style={styles.insightLabel}>{t('dream.budgetMix')}</Text>{insights.budgetDistribution.filter((item) => item.count > 0).map((item) => <View key={item.id} style={styles.budgetMixRow}><Text style={styles.budgetMixLabel}>{item.symbol} {budgetLabel(item.id)}</Text><Text style={styles.budgetMixCount}>{item.count}</Text></View>)}<Text style={styles.insightNote}>{t('dream.insightNote')}</Text></View> : null}
       <View accessibilityLabel={t('passport.title')} style={styles.passportCard}>
-        <Text style={styles.eyebrow}>{t('passport.kicker')}</Text>
-        <Text style={styles.passportTitle}>{t('passport.title')}</Text>
+        <View style={styles.passportHeading}>
+          <Text style={styles.passportEyebrow}>{t('passport.kicker')}</Text>
+          <Text style={styles.passportTitle}>{t('passport.title')}</Text>
+        </View>
         {colourPassport?.isEmpty ? (
-          <Text style={styles.passportEmpty}>{t('passport.empty')}</Text>
+          <View style={styles.passportEarlyState}>
+            <View style={styles.passportBlankComposition}>
+              <View style={styles.passportBlankTall} />
+              <View style={styles.passportBlankShort} />
+            </View>
+            <Text style={styles.passportEmpty}>{t('passport.empty')}</Text>
+          </View>
         ) : (
           <>
+            {passportComposition.length ? (
+              <View accessibilityLabel={t('passport.paletteA11y')} style={styles.passportComposition}>
+                {passportComposition.map((hex, index) => (
+                  <View
+                    accessibilityLabel={t('passport.swatchA11y', { color: hex })}
+                    key={hex}
+                    style={[
+                      styles.passportColourField,
+                      index === 0 && styles.passportColourFieldPrimary,
+                      { backgroundColor: hex },
+                    ]}
+                  />
+                ))}
+              </View>
+            ) : null}
             {(() => {
               const narrative = getPassportNarrative(colourPassport);
               if (!narrative) return null;
@@ -254,15 +287,10 @@ export default function SignatureScreen({
                 : { color: colorName(narrative.colorId) };
               return <Text style={styles.passportNarrative}>{t(narrative.key, params)}</Text>;
             })()}
-            {colourPassport?.representativePalette?.length ? (
-              <View accessibilityLabel={t('passport.paletteA11y')} style={styles.passportPalette}>
-                {colourPassport.representativePalette.map((hex) => <View accessibilityLabel={t('passport.swatchA11y', { color: hex })} key={hex} style={[styles.passportSwatch, { backgroundColor: hex }]} />)}
-              </View>
-            ) : null}
             <View style={styles.passportFacts}>
-              {colourPassport?.dream?.dominantColor ? <View style={styles.passportFact}><Text style={styles.passportFactLabel}>{t('passport.dreamColor')}</Text><Text style={styles.passportFactValue}>{colorName(colourPassport.dream.dominantColor.id)}</Text></View> : null}
-              {colourPassport?.memory?.dominantColor ? <View style={styles.passportFact}><Text style={styles.passportFactLabel}>{t('passport.memoryColor')}</Text><Text style={styles.passportFactValue}>{colorName(colourPassport.memory.dominantColor.id)}</Text></View> : null}
-              {colourPassport?.dominantVibe ? <View style={styles.passportFact}><Text style={styles.passportFactLabel}>{t('passport.dominantVibe')}</Text><Text style={styles.passportFactValue}>{vibeName(colourPassport.dominantVibe.id)}</Text></View> : null}
+              {colourPassport?.dream?.dominantColor ? <View style={styles.passportFact}><View style={[styles.passportFactSwatch, { backgroundColor: colorHex(colourPassport.dream.dominantColor.id) }]} /><View style={styles.passportFactCopy}><Text style={styles.passportFactLabel}>{t('passport.dreamColor')}</Text><Text style={styles.passportFactValue}>{colorName(colourPassport.dream.dominantColor.id)}</Text></View></View> : null}
+              {colourPassport?.memory?.dominantColor ? <View style={styles.passportFact}><View style={[styles.passportFactSwatch, { backgroundColor: colorHex(colourPassport.memory.dominantColor.id) }]} /><View style={styles.passportFactCopy}><Text style={styles.passportFactLabel}>{t('passport.memoryColor')}</Text><Text style={styles.passportFactValue}>{colorName(colourPassport.memory.dominantColor.id)}</Text></View></View> : null}
+              {colourPassport?.dominantVibe ? <View style={styles.passportMood}><Text style={styles.passportFactLabel}>{t('passport.dominantVibe')}</Text><Text style={styles.passportMoodValue}>{vibeName(colourPassport.dominantVibe.id)}</Text></View> : null}
             </View>
           </>
         )}
@@ -313,18 +341,112 @@ export default function SignatureScreen({
 }
 
 const styles = StyleSheet.create({
-  intro: { marginBottom: 20, paddingTop: 8 }, eyebrow: { color: '#667085', fontSize: 10, fontWeight: '800', letterSpacing: 1.5, textTransform: 'uppercase' }, pageTitle: { color: '#17202A', fontSize: 36, fontWeight: '800', lineHeight: 42, marginTop: 8 }, pageSubtitle: { color: '#4B5563', fontSize: 15, lineHeight: 22, marginTop: 8 },
-  modeSwitch: { backgroundColor: '#FFFFFF', borderRadius: 9, flexDirection: 'row', marginBottom: 18, padding: 4 }, modeButton: { alignItems: 'center', borderRadius: 7, flex: 1, padding: 11 }, modeButtonSelected: { backgroundColor: '#17202A' }, modeText: { color: '#667085', fontSize: 13, fontWeight: '800' }, modeTextSelected: { color: '#FFFFFF' },
-  vibeCardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 22 },
-  colorChoiceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }, colorChoice: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#D0D5DD', borderRadius: 8, borderWidth: 1, flexBasis: '30%', flexGrow: 1, padding: 9 }, colorChoiceSelected: { borderColor: '#17202A', borderWidth: 2, padding: 8 }, colorDot: { borderColor: '#FFFFFF', borderRadius: 16, borderWidth: 2, height: 30, width: 30 }, colorName: { color: '#17202A', fontSize: 12, fontWeight: '900', marginTop: 6, textAlign: 'center' }, colorAction: { color: '#667085', fontSize: 9, fontWeight: '800', marginTop: 3, textAlign: 'center' },
-  budgetSection: { marginBottom: 20 }, budgetTitle: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 1.2, marginBottom: 8 }, budgetControls: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 }, budgetButton: { alignItems: 'center', backgroundColor: '#FFFFFF', borderColor: '#D0D5DD', borderRadius: 7, borderWidth: 1, flexGrow: 1, paddingHorizontal: 8, paddingVertical: 8 }, budgetButtonSelected: { backgroundColor: '#17202A', borderColor: '#17202A' }, budgetButtonText: { color: '#667085', fontSize: 10, fontWeight: '800' }, budgetButtonTextSelected: { color: '#FFFFFF' },
-  identityCard: { borderRadius: 10, marginBottom: 24, padding: 20 }, identityTitle: { color: '#17202A', fontSize: 30, fontWeight: '800', marginTop: 5 }, identityDescription: { color: '#344054', fontSize: 14, lineHeight: 21, marginTop: 7 }, resultsTitle: { color: '#17202A', fontSize: 22, fontWeight: '800', marginBottom: 14 },
-  destinationCard: { backgroundColor: '#FFFFFF', borderRadius: 10, elevation: 3, marginBottom: 20, overflow: 'hidden', shadowColor: '#000000', shadowOffset: { height: 4, width: 0 }, shadowOpacity: 0.12, shadowRadius: 10 }, compactCard: { marginBottom: 14 }, pressedCard: { opacity: 0.88 }, destinationBody: { padding: 18 }, destinationHeading: { alignItems: 'flex-start', flexDirection: 'row', gap: 10, justifyContent: 'space-between' }, destinationCopy: { flex: 1 }, destinationName: { color: '#17202A', fontSize: 28, fontWeight: '800', marginTop: 5 }, compactName: { fontSize: 22 }, destinationCountry: { color: '#667085', fontSize: 14, fontWeight: '600', marginTop: 1 }, destinationDescription: { color: '#4B5563', fontSize: 14, lineHeight: 21, marginTop: 12 }, badgeColumn: { alignItems: 'flex-end', gap: 6 }, savedBadge: { backgroundColor: '#E8F1EC', borderRadius: 5, color: '#28533C', fontSize: 10, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 5 }, memoryBadge: { backgroundColor: '#F3EAF7', borderRadius: 5, color: '#68427A', fontSize: 10, fontWeight: '900', overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 5 }, memoryMessage: { color: '#68427A', fontSize: 13, fontWeight: '800', marginTop: 12 },
-  reasonList: { backgroundColor: '#F4F7F8', borderRadius: 7, marginTop: 12, padding: 11 }, reasonTitle: { color: '#344054', fontSize: 11, fontWeight: '900', letterSpacing: 0.7, textTransform: 'uppercase' }, reasonText: { color: '#4B5563', fontSize: 12, lineHeight: 18, marginTop: 5 },
-  paletteRow: { flexDirection: 'row', gap: 8, marginTop: 16 }, swatch: { borderColor: '#FFFFFF', borderRadius: 5, borderWidth: 2, flex: 1, height: 34 }, emptyCard: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 10, padding: 28 }, emptyTitle: { color: '#17202A', fontSize: 22, fontWeight: '800', textAlign: 'center' }, emptyCopy: { color: '#667085', fontSize: 14, lineHeight: 21, marginTop: 8, textAlign: 'center' },
-  backButton: { alignSelf: 'flex-start', backgroundColor: '#FFFFFF', borderRadius: 8, marginBottom: 14, paddingHorizontal: 14, paddingVertical: 10 }, backButtonText: { color: '#17202A', fontSize: 14, fontWeight: '800' }, detailCard: { backgroundColor: '#FFFFFF', borderRadius: 10, overflow: 'hidden' }, detailBody: { padding: 22 }, detailKicker: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 1.5 }, detailTitle: { color: '#17202A', fontSize: 38, fontWeight: '900', marginTop: 5 }, detailCountry: { color: '#667085', fontSize: 17, fontWeight: '600', marginTop: 2 }, detailMemoryMessage: { backgroundColor: '#F3EAF7', borderRadius: 7, color: '#68427A', fontSize: 14, fontWeight: '800', marginTop: 16, overflow: 'hidden', padding: 12 }, vibeLine: { color: '#8D4F5B', fontSize: 12, fontWeight: '900', letterSpacing: 1, marginTop: 18, textTransform: 'uppercase' }, detailDescription: { color: '#4B5563', fontSize: 15, lineHeight: 23, marginTop: 9 }, detailSectionTitle: { color: '#17202A', fontSize: 17, fontWeight: '800', marginTop: 22 },
-  snapshot: { backgroundColor: '#F4F7F8', borderRadius: 8, marginTop: 24, padding: 16 }, snapshotRegion: { color: '#17202A', fontSize: 21, fontWeight: '900', marginBottom: 14, marginTop: 5 }, factLabel: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 0.8, marginTop: 12, textTransform: 'uppercase' }, factValue: { color: '#17202A', fontSize: 15, fontWeight: '700', marginTop: 3 }, sourceNote: { color: '#667085', fontSize: 10, marginTop: 3 }, saveButton: { alignItems: 'center', backgroundColor: '#17202A', borderRadius: 8, marginTop: 26, padding: 14 }, saveButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' }, removeButton: { backgroundColor: '#FDECEC', borderColor: '#D92D20', borderWidth: 1 }, removeButtonText: { color: '#A61B1B' }, addJourneyButton: { alignItems: 'center', backgroundColor: '#E8EEF2', borderRadius: 8, marginTop: 10, padding: 14 }, addJourneyButtonText: { color: '#17202A', fontSize: 14, fontWeight: '800' }, credit: { color: '#667085', fontSize: 11, marginTop: 14, textAlign: 'center', textDecorationLine: 'underline' }, relatedSection: { marginTop: 26 },
-  insightsCard: { backgroundColor: '#FFFFFF', borderRadius: 10, marginBottom: 20, padding: 22 }, insightCount: { color: '#17202A', fontSize: 28, fontWeight: '900', marginTop: 7 }, insightLabel: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 1.2, marginTop: 18 }, insightValue: { color: '#8D4F5B', fontSize: 20, fontWeight: '800', marginTop: 3 }, budgetMixRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }, budgetMixLabel: { color: '#344054', fontSize: 13, fontWeight: '700' }, budgetMixCount: { color: '#17202A', fontSize: 13, fontWeight: '900' }, insightNote: { color: '#667085', fontSize: 12, marginTop: 18 }, darkButton: { backgroundColor: '#17202A', borderRadius: 8, marginTop: 18, paddingHorizontal: 18, paddingVertical: 12 }, darkButtonText: { color: '#FFFFFF', fontWeight: '800' },
-  inspiredSection: { backgroundColor: '#E8EEF2', borderRadius: 10, marginTop: 28, padding: 18 }, inspiredTitle: { color: '#17202A', fontSize: 28, fontWeight: '900', marginTop: 5 }, inspiredCopy: { color: '#4B5563', fontSize: 14, lineHeight: 21, marginBottom: 18, marginTop: 7 },
-  passportCard: { backgroundColor: '#FFFFFF', borderRadius: 10, marginBottom: 20, padding: 22 }, passportTitle: { color: '#17202A', fontSize: 28, fontWeight: '900', marginTop: 5 }, passportNarrative: { color: '#68427A', fontSize: 19, fontWeight: '800', lineHeight: 27, marginTop: 14 }, passportEmpty: { color: '#667085', fontSize: 14, lineHeight: 21, marginTop: 12 }, passportPalette: { flexDirection: 'row', gap: 7, marginTop: 18 }, passportSwatch: { borderColor: '#FFFFFF', borderRadius: 6, borderWidth: 2, flex: 1, height: 48 }, passportFacts: { gap: 10, marginTop: 18 }, passportFact: { borderTopColor: '#E4E9EC', borderTopWidth: 1, paddingTop: 10 }, passportFactLabel: { color: '#667085', fontSize: 10, fontWeight: '900', letterSpacing: 0.8, textTransform: 'uppercase' }, passportFactValue: { color: '#17202A', fontSize: 17, fontWeight: '800', marginTop: 3 },
+  intro: { marginBottom: 26, paddingTop: 14 },
+  eyebrow: { color: '#766F68', fontSize: 10, fontWeight: '700', letterSpacing: 1.8, textTransform: 'uppercase' },
+  pageTitle: { color: '#1C2426', fontSize: 41, fontWeight: '700', letterSpacing: -1, lineHeight: 46, marginTop: 9 },
+  pageSubtitle: { color: '#5E625F', fontSize: 16, lineHeight: 24, marginTop: 10, maxWidth: 340 },
+  modeSwitch: { alignSelf: 'flex-start', borderBottomColor: '#D7D0C7', borderBottomWidth: 1, flexDirection: 'row', marginBottom: 22 },
+  modeButton: { alignItems: 'center', minHeight: 44, paddingHorizontal: 14, paddingVertical: 12 },
+  modeButtonSelected: { borderBottomColor: '#1C2426', borderBottomWidth: 2 },
+  modeText: { color: '#77736E', fontSize: 13, fontWeight: '600' },
+  modeTextSelected: { color: '#1C2426' },
+  vibeCardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 26 },
+  colorChoiceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginBottom: 20 },
+  colorChoice: { alignItems: 'center', backgroundColor: '#FFFCF7', borderColor: '#E2DBD1', borderRadius: 12, borderWidth: 1, flexBasis: '30%', flexGrow: 1, minHeight: 92, padding: 11 },
+  colorChoiceSelected: { backgroundColor: '#F1ECE3', borderColor: '#1C2426', borderWidth: 2, padding: 10 },
+  colorDot: { borderColor: '#FFFFFF', borderRadius: 18, borderWidth: 2, height: 36, width: 36 },
+  colorName: { color: '#1C2426', fontSize: 12, fontWeight: '700', marginTop: 7, textAlign: 'center' },
+  colorAction: { color: '#77736E', fontSize: 9, fontWeight: '700', letterSpacing: 0.5, marginTop: 3, textAlign: 'center', textTransform: 'uppercase' },
+  budgetSection: { marginBottom: 26 },
+  budgetTitle: { color: '#766F68', fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginBottom: 10, textTransform: 'uppercase' },
+  budgetControls: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  budgetButton: { alignItems: 'center', backgroundColor: '#FFFCF7', borderColor: '#DED6CC', borderRadius: 20, borderWidth: 1, flexGrow: 1, minHeight: 40, paddingHorizontal: 10, paddingVertical: 9 },
+  budgetButtonSelected: { backgroundColor: '#1C2426', borderColor: '#1C2426' },
+  budgetButtonText: { color: '#66625E', fontSize: 10, fontWeight: '700' },
+  budgetButtonTextSelected: { color: '#FFFFFF' },
+  identityCard: { borderRadius: 16, marginBottom: 30, padding: 24 },
+  identityTitle: { color: '#1C2426', fontSize: 34, fontWeight: '700', letterSpacing: -0.5, marginTop: 7 },
+  identityDescription: { color: '#3E4747', fontSize: 15, lineHeight: 23, marginTop: 9 },
+  resultsTitle: { color: '#1C2426', fontSize: 25, fontWeight: '700', letterSpacing: -0.3, marginBottom: 16 },
+  destinationCard: { backgroundColor: '#FFFCF7', borderRadius: 16, elevation: 2, marginBottom: 24, overflow: 'hidden', shadowColor: '#2C2925', shadowOffset: { height: 5, width: 0 }, shadowOpacity: 0.09, shadowRadius: 14 },
+  compactCard: { marginBottom: 20 },
+  pressedCard: { opacity: 0.9, transform: [{ scale: 0.99 }] },
+  destinationBody: { padding: 20 },
+  destinationHeading: { alignItems: 'flex-start', flexDirection: 'row', gap: 10, justifyContent: 'space-between' },
+  destinationCopy: { flex: 1 },
+  destinationName: { color: '#1C2426', fontSize: 31, fontWeight: '700', letterSpacing: -0.6, marginTop: 6 },
+  compactName: { fontSize: 27 },
+  destinationCountry: { color: '#77736E', fontSize: 14, fontWeight: '500', marginTop: 2 },
+  destinationDescription: { color: '#535B59', fontSize: 14, lineHeight: 22, marginTop: 14 },
+  badgeColumn: { alignItems: 'flex-end', gap: 6 },
+  savedBadge: { backgroundColor: '#E8F1EC', borderRadius: 12, color: '#28533C', fontSize: 10, fontWeight: '700', overflow: 'hidden', paddingHorizontal: 9, paddingVertical: 5 },
+  memoryBadge: { backgroundColor: '#F0E7F2', borderRadius: 12, color: '#68427A', fontSize: 10, fontWeight: '700', overflow: 'hidden', paddingHorizontal: 9, paddingVertical: 5 },
+  memoryMessage: { borderLeftColor: '#8C6B96', borderLeftWidth: 2, color: '#68427A', fontSize: 13, fontStyle: 'italic', lineHeight: 19, marginTop: 14, paddingLeft: 10 },
+  reasonList: { borderLeftColor: '#B18A65', borderLeftWidth: 2, marginTop: 16, paddingLeft: 12 },
+  reasonTitle: { color: '#76624F', fontSize: 10, fontWeight: '700', letterSpacing: 1.1, textTransform: 'uppercase' },
+  reasonText: { color: '#5D554E', fontSize: 13, fontStyle: 'italic', lineHeight: 20, marginTop: 5 },
+  paletteRow: { flexDirection: 'row', gap: 5, marginTop: 18 },
+  swatch: { flex: 1, height: 44 },
+  emptyCard: { alignItems: 'center', backgroundColor: '#FFFCF7', borderRadius: 16, padding: 32 },
+  emptyTitle: { color: '#1C2426', fontSize: 23, fontWeight: '700', textAlign: 'center' },
+  emptyCopy: { color: '#77736E', fontSize: 14, lineHeight: 22, marginTop: 9, textAlign: 'center' },
+  backButton: { alignSelf: 'flex-start', minHeight: 44, marginBottom: 12, paddingVertical: 12 },
+  backButtonText: { color: '#1C2426', fontSize: 14, fontWeight: '700' },
+  detailCard: { backgroundColor: '#FFFCF7', borderRadius: 18, overflow: 'hidden' },
+  detailBody: { padding: 24 },
+  detailKicker: { color: '#766F68', fontSize: 10, fontWeight: '700', letterSpacing: 1.7, textTransform: 'uppercase' },
+  detailTitle: { color: '#1C2426', fontSize: 43, fontWeight: '700', letterSpacing: -1.1, lineHeight: 48, marginTop: 7 },
+  detailCountry: { color: '#77736E', fontSize: 18, fontWeight: '500', marginTop: 3 },
+  detailMemoryMessage: { borderLeftColor: '#8C6B96', borderLeftWidth: 3, color: '#68427A', fontSize: 15, fontStyle: 'italic', lineHeight: 22, marginTop: 20, paddingLeft: 13 },
+  vibeLine: { color: '#8D4F5B', fontSize: 11, fontWeight: '700', letterSpacing: 1.2, marginTop: 22, textTransform: 'uppercase' },
+  detailDescription: { color: '#4E5755', fontSize: 16, lineHeight: 25, marginTop: 10 },
+  detailSectionTitle: { color: '#1C2426', fontSize: 19, fontWeight: '700', marginTop: 28 },
+  snapshot: { borderTopColor: '#DCD4CA', borderTopWidth: 1, marginTop: 30, paddingTop: 22 },
+  snapshotRegion: { color: '#1C2426', fontSize: 22, fontWeight: '700', marginBottom: 14, marginTop: 5 },
+  factLabel: { color: '#817A72', fontSize: 10, fontWeight: '700', letterSpacing: 0.9, marginTop: 13, textTransform: 'uppercase' },
+  factValue: { color: '#343C3C', fontSize: 15, fontWeight: '600', marginTop: 4 },
+  sourceNote: { color: '#8A857F', fontSize: 10, marginTop: 4 },
+  guidanceNote: { color: '#817A72', fontSize: 11, fontStyle: 'italic', lineHeight: 16, marginTop: 4 },
+  saveButton: { alignItems: 'center', backgroundColor: '#1C2426', borderRadius: 12, marginTop: 30, minHeight: 48, padding: 14 },
+  saveButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  removeButton: { backgroundColor: '#FBEDED', borderColor: '#D92D20', borderWidth: 1 },
+  removeButtonText: { color: '#A61B1B' },
+  addJourneyButton: { alignItems: 'center', borderColor: '#1C2426', borderRadius: 12, borderWidth: 1, marginTop: 10, minHeight: 48, padding: 14 },
+  addJourneyButtonText: { color: '#1C2426', fontSize: 14, fontWeight: '700' },
+  credit: { color: '#817A72', fontSize: 11, marginTop: 16, textAlign: 'center', textDecorationLine: 'underline' },
+  relatedSection: { marginTop: 34 },
+  insightsCard: { borderBottomColor: '#DCD4CA', borderBottomWidth: 1, borderTopColor: '#DCD4CA', borderTopWidth: 1, marginBottom: 30, paddingVertical: 24 },
+  insightCount: { color: '#1C2426', fontSize: 29, fontWeight: '700', letterSpacing: -0.4, marginTop: 8 },
+  insightLabel: { color: '#817A72', fontSize: 10, fontWeight: '700', letterSpacing: 1.2, marginTop: 19, textTransform: 'uppercase' },
+  insightValue: { color: '#8D4F5B', fontSize: 20, fontWeight: '600', marginTop: 4 },
+  budgetMixRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 9 },
+  budgetMixLabel: { color: '#4E5755', fontSize: 13, fontWeight: '600' },
+  budgetMixCount: { color: '#1C2426', fontSize: 13, fontWeight: '700' },
+  insightNote: { color: '#817A72', fontSize: 12, lineHeight: 18, marginTop: 20 },
+  darkButton: { backgroundColor: '#1C2426', borderRadius: 10, marginTop: 18, paddingHorizontal: 18, paddingVertical: 13 },
+  darkButtonText: { color: '#FFFFFF', fontWeight: '700' },
+  inspiredSection: { borderTopColor: '#B8AA99', borderTopWidth: 1, marginTop: 42, paddingTop: 30 },
+  inspiredTitle: { color: '#1C2426', fontSize: 35, fontWeight: '700', letterSpacing: -0.7, marginTop: 7 },
+  inspiredCopy: { color: '#5E625F', fontSize: 15, lineHeight: 23, marginBottom: 22, marginTop: 9, maxWidth: 330 },
+  passportCard: { backgroundColor: '#20282A', borderRadius: 20, marginBottom: 32, overflow: 'hidden', padding: 24 },
+  passportHeading: { marginBottom: 20 },
+  passportEyebrow: { color: '#BDC7C6', fontSize: 10, fontWeight: '700', letterSpacing: 1.8, textTransform: 'uppercase' },
+  passportTitle: { color: '#FFFFFF', fontSize: 34, fontWeight: '700', letterSpacing: -0.6, marginTop: 7 },
+  passportComposition: { flexDirection: 'row', gap: 4, height: 154, marginHorizontal: -24 },
+  passportColourField: { flex: 1 },
+  passportColourFieldPrimary: { flex: 2.2 },
+  passportNarrative: { color: '#FFFFFF', fontSize: 22, fontWeight: '600', lineHeight: 31, marginTop: 24 },
+  passportFacts: { marginTop: 24 },
+  passportFact: { alignItems: 'center', borderTopColor: 'rgba(255,255,255,0.18)', borderTopWidth: 1, flexDirection: 'row', gap: 13, paddingVertical: 14 },
+  passportFactSwatch: { borderColor: 'rgba(255,255,255,0.45)', borderRadius: 24, borderWidth: 1, height: 46, width: 46 },
+  passportFactCopy: { flex: 1 },
+  passportFactLabel: { color: '#BDC7C6', fontSize: 10, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase' },
+  passportFactValue: { color: '#FFFFFF', fontSize: 18, fontWeight: '600', marginTop: 4 },
+  passportMood: { borderTopColor: 'rgba(255,255,255,0.18)', borderTopWidth: 1, paddingTop: 18 },
+  passportMoodValue: { color: '#F2DCCB', fontSize: 30, fontStyle: 'italic', fontWeight: '500', marginTop: 5 },
+  passportEarlyState: { paddingTop: 4 },
+  passportBlankComposition: { flexDirection: 'row', gap: 5, height: 110, marginHorizontal: -24 },
+  passportBlankTall: { backgroundColor: '#465052', flex: 2 },
+  passportBlankShort: { backgroundColor: '#6D7778', flex: 1 },
+  passportEmpty: { color: '#E2E7E6', fontSize: 16, lineHeight: 24, marginTop: 22 },
 });

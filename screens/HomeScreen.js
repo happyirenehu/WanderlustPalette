@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -46,8 +45,7 @@ import {
   validateJourneyPalette,
 } from '../utils/journeyPaletteSuggestion.js';
 
-const ACTIVE_THEME_KEY = '@wanderlust_palette/active_theme';
-const DEFAULT_THEME = mockData[0]?.palette[0] || '#F7FAFC';
+const APP_BACKGROUND = '#F4F0E8';
 const EMPTY_FORM = { destination: '', country: '', date: '', notes: '' };
 const EMPTY_EXPENSE_FORM = { amount: '', category: '', id: '' };
 
@@ -67,7 +65,6 @@ export default function HomeScreen() {
   const sampleJourneys = useMemo(() => normalizeJourneys(mockData), []);
   const [journeys, setJourneys] = useState(sampleJourneys);
   const [hasStoredJourneys, setHasStoredJourneys] = useState(false);
-  const [activeTheme, setActiveTheme] = useState(DEFAULT_THEME);
   const [screen, setScreen] = useState('list');
   const [selectedId, setSelectedId] = useState(null);
   const [editingId, setEditingId] = useState(null);
@@ -102,9 +99,8 @@ export default function HomeScreen() {
     let isMounted = true;
 
     const loadAppState = async () => {
-      const [journeyResult, savedThemeResult, favouriteResult, recentVibeResult] = await Promise.all([
+      const [journeyResult, favouriteResult, recentVibeResult] = await Promise.all([
         loadJourneys(sampleJourneys),
-        AsyncStorage.getItem(ACTIVE_THEME_KEY).catch(() => null),
         loadFavouriteIds(),
         loadRecentVibeIds(),
       ]);
@@ -127,7 +123,6 @@ export default function HomeScreen() {
           .then(() => saveRecentVibeIds(hydratedIds))
           .then((result) => setRecentVibeStorageError(result.error || ''));
       }
-      if (savedThemeResult) setActiveTheme(savedThemeResult);
     };
 
     loadAppState();
@@ -160,24 +155,12 @@ export default function HomeScreen() {
     profile: preferenceProfile,
     journeys: personalizationJourneys,
   }), [personalizationJourneys, preferenceProfile]);
-  const textColor = getContrastColor(activeTheme);
   const resetScrollPosition = useCallback(() => {
     scrollViewRef.current?.scrollTo({ animated: false, y: 0 });
   }, []);
   const scrollToDiscoveryResults = useCallback((y) => {
     scrollViewRef.current?.scrollTo({ animated: true, y: Math.max(0, y - 8) });
   }, []);
-
-  const selectTheme = async (color) => {
-    if (!color) return;
-    setActiveTheme(color);
-
-    try {
-      await AsyncStorage.setItem(ACTIVE_THEME_KEY, color);
-    } catch (error) {
-      setStorageError('The theme changed for this session but could not be saved.');
-    }
-  };
 
   const persistJourneys = async (nextJourneys) => {
     const result = await saveJourneys(nextJourneys);
@@ -577,23 +560,37 @@ export default function HomeScreen() {
       <Image
         accessibilityLabel={accessibilityLabel}
         onError={() => setFailedImageUris((current) => new Set(current).add(imageUri))}
+        resizeMode="cover"
         source={{ uri: getDisplayImageUri(imageUri) }}
         style={imageStyle}
       />
     );
   };
 
-  const renderPalette = (journey) => {
+  const renderPalette = (journey, compact = false) => {
     if (journey.palette.length === 0) return null;
 
     return (
-      <View style={styles.paletteRow}>
+      <View accessibilityLabel={t('photo.paletteField')} style={[styles.paletteRow, compact && styles.cardPaletteRow]}>
         {journey.palette.slice(0, 5).map((color) => (
           <View
             accessibilityLabel={t('journeys.paletteColourA11y', { color })}
             key={color}
-            style={[styles.swatch, { backgroundColor: color }]}
+            style={[styles.swatch, compact && styles.cardSwatch, { backgroundColor: color }]}
           />
+        ))}
+      </View>
+    );
+  };
+
+  const renderJourneyCover = (journey, imageStyle) => {
+    if (journey.imageUri) return renderJourneyImage(journey.imageUri, imageStyle);
+    const validPalette = journey.palette.filter((color) => /^#[0-9A-F]{6}$/i.test(color)).slice(0, 3);
+    const palette = validPalette.length ? validPalette : ['#D8D2C8', '#A8B2AF', '#687374'];
+    return (
+      <View accessibilityLabel={t('images.fallback')} style={[imageStyle, styles.journeyPaletteCover]}>
+        {palette.map((color, index) => (
+          <View key={`${color}-${index}`} style={[styles.journeyPaletteField, index === 0 && styles.journeyPaletteFieldPrimary, { backgroundColor: color }]} />
         ))}
       </View>
     );
@@ -700,9 +697,9 @@ export default function HomeScreen() {
     <>
       <View style={styles.headerRow}>
         <View style={styles.headerCopy}>
-          <Text style={[styles.kicker, { color: textColor }]}>{t('journeys.kicker')}</Text>
-          <Text style={[styles.title, { color: textColor }]}>{t('journeys.title')}</Text>
-          <Text style={[styles.subtitle, { color: textColor }]}>{t('journeys.subtitle')}</Text>
+          <Text style={styles.kicker}>{t('journeys.kicker')}</Text>
+          <Text style={styles.title}>{t('journeys.title')}</Text>
+          <Text style={styles.subtitle}>{t('journeys.subtitle')}</Text>
         </View>
         <Pressable accessibilityRole="button" onPress={() => openAddForm()} style={styles.primaryButton}>
           <Text style={styles.primaryButtonText}>{t('journeys.add')}</Text>
@@ -724,13 +721,13 @@ export default function HomeScreen() {
           onPress={() => openDetail(journey)}
           style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
         >
-          {renderJourneyImage(journey.imageUri, styles.image)}
+          {renderJourneyCover(journey, styles.image)}
           <View style={styles.cardBody}>
             <Text style={styles.cardDate}>{journey.date}</Text>
             <Text style={styles.location}>{journey.destination}</Text>
             <Text style={styles.country}>{journey.country}</Text>
-            {journey.notes ? <Text style={styles.description}>{journey.notes}</Text> : null}
-            {renderPalette(journey)}
+            {journey.notes ? <Text numberOfLines={2} style={styles.description}>{journey.notes}</Text> : null}
+            {renderPalette(journey, true)}
           </View>
         </Pressable>
       ))}
@@ -750,30 +747,37 @@ export default function HomeScreen() {
       );
     }
 
+    const localAccent = /^#[0-9A-F]{6}$/i.test(selectedJourney.palette[0] || '')
+      ? selectedJourney.palette[0]
+      : '#E8EEF2';
+    const localTextColor = getContrastColor(localAccent);
     return (
       <>
         <Pressable onPress={openList} style={styles.backButton}>
           <Text style={styles.backButtonText}>← {t('journeys.myJourneys')}</Text>
         </Pressable>
-        <View style={[
-          styles.detailCard,
-          selectedJourney.palette[0] ? { borderTopColor: selectedJourney.palette[0], borderTopWidth: 8 } : null,
-        ]}>
-          {renderJourneyImage(selectedJourney.imageUri, styles.detailImage)}
-          <Text style={styles.cardDate}>{selectedJourney.date}</Text>
-          <Text style={styles.detailTitle}>{selectedJourney.destination}</Text>
-          <Text style={styles.detailCountry}>{selectedJourney.country}</Text>
-          <Text style={styles.detailNotes}>{selectedJourney.notes || t('journeys.noNotes')}</Text>
-          {renderPalette(selectedJourney)}
-          {renderExpenseManager(selectedJourney)}
-          {renderExpenseSummary(selectedJourney)}
-          <View style={styles.actionRow}>
-            <Pressable onPress={() => openEditForm(selectedJourney)} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>{t('common.edit')}</Text>
-            </Pressable>
-            <Pressable onPress={() => requestDelete(selectedJourney)} style={styles.deleteButton}>
-              <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
-            </Pressable>
+        <View style={styles.detailCard}>
+          {renderJourneyCover(selectedJourney, styles.detailImage)}
+          <View style={[styles.detailAtmosphere, { backgroundColor: localAccent }]}>
+            <Text style={[styles.detailDate, { color: localTextColor }]}>{selectedJourney.date}</Text>
+            <Text style={[styles.detailTitle, { color: localTextColor }]}>{selectedJourney.destination}</Text>
+            <Text style={[styles.detailCountry, { color: localTextColor }]}>{selectedJourney.country}</Text>
+          </View>
+          <View style={styles.detailContent}>
+            <Text style={styles.memoryLabel}>{t('journeys.notes')}</Text>
+            <Text style={styles.detailNotes}>{selectedJourney.notes || t('journeys.noNotes')}</Text>
+            <Text style={styles.memoryLabel}>{t('photo.paletteField')}</Text>
+            {renderPalette(selectedJourney)}
+            {renderExpenseManager(selectedJourney)}
+            {renderExpenseSummary(selectedJourney)}
+            <View style={styles.actionRow}>
+              <Pressable onPress={() => openEditForm(selectedJourney)} style={styles.secondaryButton}>
+                <Text style={styles.secondaryButtonText}>{t('common.edit')}</Text>
+              </Pressable>
+              <Pressable onPress={() => requestDelete(selectedJourney)} style={styles.deleteButton}>
+                <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       </>
@@ -821,7 +825,7 @@ export default function HomeScreen() {
         <View style={styles.photoField}>
           <Text style={styles.label}>{t('photo.field')}</Text>
           {pendingDurablePhoto?.imageUri
-            ? <Image accessibilityLabel={t('photo.previewA11y')} source={{ uri: pendingDurablePhoto.imageUri }} style={styles.photoPreview} />
+            ? <Image accessibilityLabel={t('photo.previewA11y')} resizeMode="cover" source={{ uri: pendingDurablePhoto.imageUri }} style={styles.photoPreview} />
             : editingId && selectedJourney?.imageUri
               ? renderJourneyImage(selectedJourney.imageUri, styles.photoPreview)
               : <View accessibilityLabel={t('photo.noneSelected')} style={[styles.photoPreview, styles.imageFallback]}><Text style={styles.imageFallbackText}>{t('photo.noneSelected')}</Text></View>}
@@ -884,12 +888,12 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={[styles.safeArea, { backgroundColor: activeTheme }]}>
+    <SafeAreaView edges={['top', 'right', 'bottom', 'left']} style={[styles.safeArea, { backgroundColor: APP_BACKGROUND }]}>
       <ScrollView
-      contentContainerStyle={[styles.content, { backgroundColor: activeTheme }]}
+      contentContainerStyle={[styles.content, { backgroundColor: APP_BACKGROUND }]}
       keyboardShouldPersistTaps="handled"
       ref={scrollViewRef}
-      style={[styles.screen, { backgroundColor: activeTheme }]}
+      style={[styles.screen, { backgroundColor: APP_BACKGROUND }]}
     >
       <View accessibilityLabel={t('language.controlLabel')} accessibilityRole="tablist" style={styles.languageControl}>
         {[
@@ -971,7 +975,6 @@ export default function HomeScreen() {
           onAddJourney={openAddFormForDestination}
           onDestinationChange={resetScrollPosition}
           onRecommendationReady={scrollToDiscoveryResults}
-          onSelectTheme={selectTheme}
           onToggleFavourite={toggleFavourite}
           onVibeSelect={recordRecentVibe}
           preferenceProfile={preferenceProfile}
@@ -988,48 +991,57 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   screen: { flex: 1 },
-  content: { flexGrow: 1, padding: 24 },
-  languageControl: { alignSelf: 'flex-end', backgroundColor: '#FFFFFF', borderRadius: 8, flexDirection: 'row', marginBottom: 10, padding: 3 },
-  languageButton: { alignItems: 'center', borderRadius: 6, justifyContent: 'center', minHeight: 38, minWidth: 58, paddingHorizontal: 10 },
+  content: { flexGrow: 1, paddingBottom: 42, paddingHorizontal: 20, paddingTop: 18 },
+  languageControl: { alignSelf: 'flex-end', borderColor: '#D8D0C7', borderRadius: 18, borderWidth: 1, flexDirection: 'row', marginBottom: 12, padding: 2 },
+  languageButton: { alignItems: 'center', borderRadius: 15, justifyContent: 'center', minHeight: 38, minWidth: 58, paddingHorizontal: 10 },
   languageButtonSelected: { backgroundColor: '#17202A' },
   languageButtonText: { color: '#667085', fontSize: 12, fontWeight: '800' },
   languageButtonTextSelected: { color: '#FFFFFF' },
-  sectionNav: { backgroundColor: '#FFFFFF', borderRadius: 9, flexDirection: 'row', gap: 4, marginBottom: 22, padding: 4 },
-  sectionTab: { alignItems: 'center', borderRadius: 7, flex: 1, justifyContent: 'center', minHeight: 42, paddingHorizontal: 6, paddingVertical: 9 },
+  sectionNav: { borderBottomColor: '#D7D0C7', borderBottomWidth: 1, flexDirection: 'row', gap: 2, marginBottom: 26 },
+  sectionTab: { alignItems: 'center', borderRadius: 9, flex: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: 6, paddingVertical: 10 },
   sectionTabSelected: { backgroundColor: '#17202A' },
   sectionTabText: { color: '#667085', fontSize: 12, fontWeight: '800', textAlign: 'center' },
   sectionTabTextSelected: { color: '#FFFFFF' },
-  headerRow: { alignItems: 'flex-start', flexDirection: 'row', gap: 16, justifyContent: 'space-between', marginBottom: 28, paddingTop: 16 },
+  headerRow: { alignItems: 'flex-end', flexDirection: 'row', gap: 14, justifyContent: 'space-between', marginBottom: 30, paddingTop: 16 },
   headerCopy: { flex: 1 },
-  kicker: { fontSize: 11, fontWeight: '700', letterSpacing: 2, marginBottom: 12, opacity: 0.72 },
-  title: { fontSize: 44, fontWeight: '800' },
-  subtitle: { fontSize: 16, marginTop: 6, opacity: 0.78 },
-  primaryButton: { backgroundColor: '#17202A', borderRadius: 8, paddingHorizontal: 18, paddingVertical: 12 },
-  primaryButtonWide: { alignItems: 'center', backgroundColor: '#17202A', borderRadius: 8, marginTop: 8, padding: 14 },
+  kicker: { color: '#766F68', fontSize: 10, fontWeight: '700', letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' },
+  title: { color: '#1C2426', fontSize: 43, fontWeight: '700', letterSpacing: -1 },
+  subtitle: { color: '#5E625F', fontSize: 16, lineHeight: 23, marginTop: 7 },
+  primaryButton: { backgroundColor: '#1C2426', borderRadius: 12, minHeight: 46, paddingHorizontal: 17, paddingVertical: 13 },
+  primaryButtonWide: { alignItems: 'center', backgroundColor: '#1C2426', borderRadius: 12, marginTop: 12, minHeight: 50, padding: 15 },
   primaryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-  card: { backgroundColor: '#FFFFFF', borderRadius: 8, elevation: 4, marginBottom: 24, overflow: 'hidden', shadowColor: '#000000', shadowOffset: { height: 5, width: 0 }, shadowOpacity: 0.16, shadowRadius: 12 },
+  card: { backgroundColor: '#FFFCF7', borderRadius: 18, elevation: 3, marginBottom: 28, overflow: 'hidden', shadowColor: '#2C2925', shadowOffset: { height: 6, width: 0 }, shadowOpacity: 0.12, shadowRadius: 16 },
   cardPressed: { opacity: 0.88 },
-  image: { aspectRatio: 1.55, backgroundColor: '#CBD5E0', width: '100%' },
+  image: { aspectRatio: 1.08, backgroundColor: '#CBD5E0', width: '100%' },
+  journeyPaletteCover: { flexDirection: 'row', overflow: 'hidden' },
+  journeyPaletteField: { flex: 1 },
+  journeyPaletteFieldPrimary: { flex: 2 },
   imageFallback: { alignItems: 'center', backgroundColor: '#E8EEF2', justifyContent: 'center' },
   imageFallbackText: { color: '#667085', fontSize: 13, fontWeight: '700' },
-  cardBody: { padding: 18 },
-  cardDate: { color: '#667085', fontSize: 11, fontWeight: '700', letterSpacing: 1.5, textTransform: 'uppercase' },
-  location: { color: '#17202A', fontSize: 28, fontWeight: '800', marginTop: 6 },
-  country: { color: '#667085', fontSize: 15, fontWeight: '600', marginTop: 2 },
-  description: { color: '#4B5563', fontSize: 14, lineHeight: 21, marginTop: 8 },
-  paletteRow: { flexDirection: 'row', gap: 10, marginTop: 20 },
-  swatch: { borderColor: '#FFFFFF', borderRadius: 6, borderWidth: 2, flex: 1, height: 42 },
-  emptyState: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 8, padding: 32 },
-  emptyTitle: { color: '#17202A', fontSize: 24, fontWeight: '800', textAlign: 'center' },
+  cardBody: { padding: 20 },
+  cardDate: { color: '#817A72', fontSize: 10, fontWeight: '700', letterSpacing: 1.6, textTransform: 'uppercase' },
+  location: { color: '#1C2426', fontSize: 31, fontWeight: '700', letterSpacing: -0.5, marginTop: 7 },
+  country: { color: '#77736E', fontSize: 15, fontWeight: '500', marginTop: 2 },
+  description: { color: '#555D5B', fontSize: 14, fontStyle: 'italic', lineHeight: 21, marginTop: 11 },
+  paletteRow: { flexDirection: 'row', gap: 5, marginTop: 12 },
+  cardPaletteRow: { gap: 0, marginHorizontal: -20, marginBottom: -20, marginTop: 18 },
+  swatch: { flex: 1, height: 58 },
+  cardSwatch: { height: 12 },
+  emptyState: { alignItems: 'center', backgroundColor: '#FFFCF7', borderRadius: 16, padding: 32 },
+  emptyTitle: { color: '#1C2426', fontSize: 24, fontWeight: '700', textAlign: 'center' },
   emptyCopy: { color: '#667085', fontSize: 15, lineHeight: 22, marginBottom: 20, marginTop: 8, textAlign: 'center' },
-  backButton: { alignSelf: 'flex-start', backgroundColor: '#FFFFFF', borderRadius: 8, marginBottom: 16, paddingHorizontal: 14, paddingVertical: 10 },
-  backButtonText: { color: '#17202A', fontSize: 15, fontWeight: '700' },
-  detailCard: { backgroundColor: '#FFFFFF', borderRadius: 8, overflow: 'hidden', padding: 22 },
-  detailImage: { aspectRatio: 1.55, backgroundColor: '#CBD5E0', marginBottom: 20, marginHorizontal: -22, marginTop: -22, width: 'auto' },
-  detailTitle: { color: '#17202A', fontSize: 36, fontWeight: '800', marginTop: 8 },
-  detailCountry: { color: '#667085', fontSize: 18, fontWeight: '600', marginTop: 2 },
-  detailNotes: { color: '#4B5563', fontSize: 16, lineHeight: 24, marginTop: 20 },
-  expenseSummary: { backgroundColor: '#F4F7F8', borderRadius: 8, marginTop: 24, padding: 16 },
+  backButton: { alignSelf: 'flex-start', marginBottom: 12, minHeight: 44, paddingVertical: 12 },
+  backButtonText: { color: '#1C2426', fontSize: 15, fontWeight: '700' },
+  detailCard: { backgroundColor: '#FFFCF7', borderRadius: 18, overflow: 'hidden' },
+  detailImage: { aspectRatio: 1.05, backgroundColor: '#CBD5E0', width: '100%' },
+  detailAtmosphere: { paddingBottom: 25, paddingHorizontal: 22, paddingTop: 22 },
+  detailDate: { fontSize: 10, fontWeight: '700', letterSpacing: 1.6, opacity: 0.82, textTransform: 'uppercase' },
+  detailTitle: { fontSize: 39, fontWeight: '700', letterSpacing: -0.8, lineHeight: 44, marginTop: 7 },
+  detailCountry: { fontSize: 18, fontWeight: '500', marginTop: 3, opacity: 0.84 },
+  detailContent: { padding: 22 },
+  memoryLabel: { color: '#817A72', fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginTop: 6, textTransform: 'uppercase' },
+  detailNotes: { color: '#434C4A', fontSize: 18, fontStyle: 'italic', lineHeight: 28, marginBottom: 28, marginTop: 10 },
+  expenseSummary: { backgroundColor: '#F2F3F0', borderRadius: 12, marginTop: 24, padding: 17 },
   expenseTitle: { color: '#17202A', fontSize: 16, fontWeight: '900', letterSpacing: 0.8, marginBottom: 12 },
   expenseHighlightRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   expenseHighlight: { flex: 1 },
@@ -1041,7 +1053,7 @@ const styles = StyleSheet.create({
   expenseAmount: { color: '#17202A', fontSize: 13, fontWeight: '900' },
   expenseNote: { color: '#667085', fontSize: 11, lineHeight: 16, marginTop: 14 },
   expenseEmpty: { color: '#667085', fontSize: 13, lineHeight: 19 },
-  expenseManager: { borderColor: '#DCE4E8', borderRadius: 8, borderWidth: 1, marginTop: 24, padding: 16 },
+  expenseManager: { borderTopColor: '#D8D0C7', borderTopWidth: 1, marginTop: 30, paddingTop: 22 },
   expenseManagerHeader: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
   expenseManagerCopy: { flex: 1 },
   expenseManagerTitle: { color: '#17202A', fontSize: 18, fontWeight: '900' },
@@ -1067,21 +1079,21 @@ const styles = StyleSheet.create({
   secondaryButtonText: { color: '#17202A', fontWeight: '700' },
   deleteButton: { alignItems: 'center', backgroundColor: '#FDECEC', borderRadius: 8, flex: 1, padding: 13 },
   deleteButtonText: { color: '#A61B1B', fontWeight: '700' },
-  formCard: { backgroundColor: '#FFFFFF', borderRadius: 8, padding: 22 },
-  formTitle: { color: '#17202A', fontSize: 30, fontWeight: '800' },
-  formSubtitle: { color: '#667085', fontSize: 14, marginBottom: 22, marginTop: 6 },
+  formCard: { backgroundColor: '#FFFCF7', borderRadius: 18, padding: 22 },
+  formTitle: { color: '#1C2426', fontSize: 34, fontWeight: '700', letterSpacing: -0.5 },
+  formSubtitle: { color: '#77736E', fontSize: 14, marginBottom: 26, marginTop: 7 },
   linkedDestination: { backgroundColor: '#E8F1EC', borderRadius: 7, color: '#28533C', fontSize: 13, fontWeight: '800', marginBottom: 18, overflow: 'hidden', padding: 11 },
-  field: { marginBottom: 18 },
-  label: { color: '#344054', fontSize: 14, fontWeight: '700', marginBottom: 7 },
-  input: { backgroundColor: '#FFFFFF', borderColor: '#CBD5E0', borderRadius: 8, borderWidth: 1, color: '#17202A', fontSize: 16, paddingHorizontal: 12, paddingVertical: 11 },
+  field: { marginBottom: 20 },
+  label: { color: '#424A48', fontSize: 13, fontWeight: '700', marginBottom: 8 },
+  input: { backgroundColor: '#FFFFFF', borderColor: '#D8D0C7', borderRadius: 10, borderWidth: 1, color: '#1C2426', fontSize: 16, paddingHorizontal: 13, paddingVertical: 12 },
   notesInput: { minHeight: 110, textAlignVertical: 'top' },
-  photoField: { marginBottom: 18 },
-  photoPreview: { aspectRatio: 1.55, backgroundColor: '#E8EEF2', borderRadius: 8, marginBottom: 10, width: '100%' },
+  photoField: { borderTopColor: '#DED7CE', borderTopWidth: 1, marginBottom: 22, paddingTop: 22 },
+  photoPreview: { aspectRatio: 1.12, backgroundColor: '#E8EEF2', borderRadius: 14, marginBottom: 12, width: '100%' },
   photoFeedback: { color: '#667085', fontSize: 13, lineHeight: 18, marginTop: 8 },
-  suggestedPalette: { backgroundColor: '#F4F7F8', borderRadius: 8, marginBottom: 18, padding: 14 },
+  suggestedPalette: { backgroundColor: '#F1EEE8', borderRadius: 12, marginBottom: 22, padding: 16 },
   suggestedPaletteRow: { flexDirection: 'row', gap: 8, marginBottom: 12 },
-  suggestedSwatch: { borderColor: '#FFFFFF', borderRadius: 6, borderWidth: 2, flex: 1, height: 42 },
-  paletteEditor: { marginBottom: 18 },
+  suggestedSwatch: { flex: 1, height: 62 },
+  paletteEditor: { borderTopColor: '#DED7CE', borderTopWidth: 1, marginBottom: 22, paddingTop: 22 },
   paletteHelp: { color: '#667085', fontSize: 12, lineHeight: 18, marginBottom: 8 },
   paletteInputRow: { alignItems: 'center', flexDirection: 'row', gap: 10, marginBottom: 8 },
   paletteInputSwatch: { backgroundColor: '#E8EEF2', borderColor: '#CBD5E0', borderRadius: 5, borderWidth: 1, height: 34, width: 34 },

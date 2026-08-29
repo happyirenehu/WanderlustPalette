@@ -17,7 +17,6 @@ const MESSAGE_KEYS = {
   'Journeys could not be saved on this device.': 'errors.journeysSave',
   'Dream Palette could not be loaded on this device.': 'errors.dreamLoad',
   'Dream Palette could not be saved on this device.': 'errors.dreamSave',
-  'The theme changed for this session but could not be saved.': 'errors.themeSave',
   'This photo format could not be saved safely.': 'errors.unsafePhoto',
   'The photo could not be saved on this device.': 'errors.photoSave',
   'Recent vibe signals could not be loaded on this device.': 'errors.recentVibesLoad',

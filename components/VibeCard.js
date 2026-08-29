@@ -52,13 +52,13 @@ export default function VibeCard({ onPress, selected, vibe }) {
 }
 
 const styles = StyleSheet.create({
-  card: { aspectRatio: 1.12, borderColor: 'transparent', borderRadius: 10, borderWidth: 3, flexBasis: '47%', flexGrow: 1, justifyContent: 'flex-end', overflow: 'hidden' },
-  selected: { borderColor: '#FFFFFF' },
-  pressed: { opacity: 0.9 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10, 18, 25, 0.48)' },
+  card: { aspectRatio: 0.92, borderColor: 'transparent', borderRadius: 16, borderWidth: 3, flexBasis: '47%', flexGrow: 1, justifyContent: 'flex-end', overflow: 'hidden' },
+  selected: { borderColor: '#FFFFFF', elevation: 7, shadowColor: '#17202A', shadowOffset: { height: 5, width: 0 }, shadowOpacity: 0.28, shadowRadius: 12 },
+  pressed: { opacity: 0.92, transform: [{ scale: 0.985 }] },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10, 18, 25, 0.34)' },
   loader: { position: 'absolute', right: 14, top: 14 },
-  copy: { padding: 12 },
-  name: { fontSize: 19, fontWeight: '900' },
-  description: { fontSize: 11, lineHeight: 15, marginTop: 3 },
-  action: { fontSize: 10, fontWeight: '900', marginTop: 8 },
+  copy: { padding: 14 },
+  name: { fontSize: 21, fontWeight: '800', letterSpacing: -0.3 },
+  description: { fontSize: 11, lineHeight: 16, marginTop: 4 },
+  action: { fontSize: 10, fontWeight: '800', letterSpacing: 0.7, marginTop: 10, textTransform: 'uppercase' },
 });

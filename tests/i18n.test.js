@@ -73,6 +73,8 @@ describe('localized catalogue presentation', () => {
     expect(translate('zh-Hant', 'colors.citrus.name')).toBe('金色暖陽');
     expect(translate('zh-Hant', 'budget.moderate')).toBe('中等');
     expect(translate('zh-Hant', 'snapshot.title')).toBe('旅行快照');
+    expect(translate('en', 'snapshot.budgetGuidance')).toContain('Editorial guidance');
+    expect(translate('zh-Hant', 'snapshot.budgetGuidance')).toContain('編輯建議');
     expect(formatTravelRegion('zh-Hant', 'Southern Europe')).toBe('南歐');
     expect(formatIncomeLevel('zh-Hant', 'High income')).toBe('高收入經濟體');
   });

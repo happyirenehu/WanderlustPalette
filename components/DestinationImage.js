@@ -48,8 +48,8 @@ export default function DestinationImage({ destination, detail = false }) {
 
 const styles = StyleSheet.create({
   frame: { overflow: 'hidden', width: '100%' },
-  cardFrame: { aspectRatio: 1.7 },
-  detailFrame: { aspectRatio: 1.45 },
+  cardFrame: { aspectRatio: 1.45 },
+  detailFrame: { aspectRatio: 1.08 },
   loading: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   fallback: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   fallbackText: { fontSize: 10, fontWeight: '900', letterSpacing: 2 },
