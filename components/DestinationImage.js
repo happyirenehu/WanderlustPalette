@@ -52,5 +52,5 @@ const styles = StyleSheet.create({
   detailFrame: { aspectRatio: 1.08 },
   loading: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   fallback: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  fallbackText: { fontSize: 10, fontWeight: '900', letterSpacing: 2 },
+  fallbackText: { fontSize: 14, fontWeight: '900', letterSpacing: 1.8 },
 });

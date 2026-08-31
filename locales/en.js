@@ -22,7 +22,8 @@ const en = {
     label: 'Main sections',
     discover: 'Discover',
     dream: 'Dream Palette',
-    journeys: 'My Journeys',
+    journeys: 'Journeys',
+    passport: 'Passport',
   },
   discovery: {
     flow: 'FEEL → COLOUR → PLACE',
@@ -108,10 +109,12 @@ const en = {
     emptyCopy: 'Explore a vibe or colour and save places that feel like your next chapter.',
     memory: 'MEMORY',
     becameMemory: 'A dream became a memory',
+    savedDreamsTitle: 'Saved Dreams',
   },
   personalization: {
     kicker: 'YOUR TRAVEL PATTERN',
     title: 'Inspired by You',
+    jump: 'See Inspired by You',
     personalizedCopy: 'Places shaped by the moods, colours, dreams, and memories you have gathered.',
     neutralCopy: 'A few places to begin. Choose vibes, save Dreams, and add Journeys to make this collection personal.',
     whyTitle: 'Why this fits you',

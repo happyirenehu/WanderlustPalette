@@ -59,6 +59,6 @@ const styles = StyleSheet.create({
   loader: { position: 'absolute', right: 14, top: 14 },
   copy: { padding: 14 },
   name: { fontSize: 21, fontWeight: '800', letterSpacing: -0.3 },
-  description: { fontSize: 11, lineHeight: 16, marginTop: 4 },
-  action: { fontSize: 10, fontWeight: '800', letterSpacing: 0.7, marginTop: 10, textTransform: 'uppercase' },
+  description: { fontSize: 14, lineHeight: 20, marginTop: 4 },
+  action: { fontSize: 14, fontWeight: '800', letterSpacing: 0.5, marginTop: 10, textTransform: 'uppercase' },
 });
