@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import DestinationImage from '../components/DestinationImage.js';
 import VibeCard from '../components/VibeCard.js';
@@ -21,6 +21,15 @@ import {
 } from '../utils/personalizationPresentation.js';
 
 const FALLBACK_COLOR = '#E8EEF2';
+const EDITORIAL_SERIF = Platform.select({ ios: 'Georgia', default: 'serif' });
+const WATERCOLOUR_SHAPES = [
+  { height: 152, left: -22, top: 30, transform: [{ rotate: '-8deg' }], width: 198 },
+  { height: 176, right: -18, top: 4, transform: [{ rotate: '11deg' }], width: 178 },
+  { bottom: -34, height: 134, left: 68, transform: [{ rotate: '4deg' }], width: 206 },
+  { bottom: 16, height: 92, left: 10, transform: [{ rotate: '-14deg' }], width: 128 },
+  { height: 104, right: 26, top: 72, transform: [{ rotate: '16deg' }], width: 136 },
+];
+const EARLY_PASSPORT_WASHES = ['#B8AAA1', '#C8BDB0', '#A7B4B0'];
 
 export default function SignatureScreen({
   colourPassport,
@@ -112,6 +121,23 @@ export default function SignatureScreen({
     ].filter(Boolean).map(colorHex);
     return [...new Set([...representative, ...supported])].slice(0, 5);
   })();
+  const renderWatercolourArtwork = (palette) => (
+    <View accessibilityLabel={t('passport.paletteA11y')} style={styles.watercolourArtwork}>
+      {palette.map((hex, index) => (
+        <View
+          accessibilityLabel={t('passport.swatchA11y', { color: hex })}
+          key={`${hex}-${index}`}
+          style={[
+            styles.watercolourWash,
+            WATERCOLOUR_SHAPES[index % WATERCOLOUR_SHAPES.length],
+            { backgroundColor: hex },
+          ]}
+        >
+          <View style={[styles.watercolourBloom, { backgroundColor: hex }]} />
+        </View>
+      ))}
+    </View>
+  );
 
   useEffect(() => setSelectedDestinationId(null), [mode]);
 
@@ -147,10 +173,10 @@ export default function SignatureScreen({
     return () => { active = false; controller.abort(); };
   }, [selectedDestination?.countryCode]);
 
-  const renderPalette = (palette, label) => (
-    <View accessibilityLabel={t('discovery.paletteLabel', { name: label })} style={styles.paletteRow}>
+  const renderPalette = (palette, label, signature = false) => (
+    <View accessibilityLabel={t('discovery.paletteLabel', { name: label })} style={[styles.paletteRow, signature && styles.signaturePaletteRow]}>
       {(palette.length ? palette : [FALLBACK_COLOR]).map((color) => (
-        <View accessibilityLabel={t('discovery.colorLabel', { name: color })} key={color} style={[styles.swatch, { backgroundColor: color }]} />
+        <View accessibilityLabel={t('discovery.colorLabel', { name: color })} key={color} style={[styles.swatch, signature && styles.signatureSwatch, { backgroundColor: color }]} />
       ))}
     </View>
   );
@@ -221,7 +247,7 @@ export default function SignatureScreen({
             <Text style={styles.vibeLine}>{destinationVibes.map((vibe) => vibe.name).join(' · ')}</Text><Text style={styles.detailDescription}>{selectedDestination.description}</Text>
             <Text style={styles.detailSectionTitle}>{t('discovery.colorStoryTitle')}</Text><Text style={styles.detailDescription}>{destinationColors.map((color) => color.name).join(' · ') || selectedDestination.colorFamily}</Text>
             <Text style={styles.detailSectionTitle}>{t('discovery.whyItMatches')}</Text><Text style={styles.detailDescription}>{selectedDestination.whyItMatches}</Text>
-            <Text style={styles.detailSectionTitle}>{t('discovery.destinationPalette')}</Text>{renderPalette(selectedDestination.palette, selectedDestination.name)}
+            <Text style={styles.detailSectionTitle}>{t('discovery.destinationPalette')}</Text>{renderPalette(selectedDestination.palette, selectedDestination.name, true)}
             <View accessibilityLabel={t('snapshot.accessibility', {
               budget: budgetDisplay(selectedDestination.budget),
               capital: capitalDisplay ? t('snapshot.capitalA11y', { capital: capitalDisplay }) : '',
@@ -235,8 +261,10 @@ export default function SignatureScreen({
               {capitalDisplay ? <><Text style={styles.factLabel}>{t('snapshot.capital')}</Text><Text style={styles.factValue}>{capitalDisplay}</Text></> : null}
               {incomeDisplay ? <><Text style={styles.factLabel}>{t('snapshot.incomeLevel')}</Text><Text style={styles.factValue}>{incomeDisplay}</Text><Text style={styles.sourceNote}>{t('snapshot.source')}</Text></> : null}
             </View>
-            <Pressable accessibilityLabel={t('discovery.saveDreamA11y', { action: saved ? t('common.remove') : t('common.save'), direction: saved ? t('discovery.removeDirection') : t('discovery.addDirection'), name: selectedDestination.name })} accessibilityRole="button" onPress={() => onToggleFavourite(selectedDestination.id)} style={[styles.saveButton, saved && styles.removeButton]}><Text style={[styles.saveButtonText, saved && styles.removeButtonText]}>{saved ? t('discovery.removeFromDream') : t('discovery.saveToDream')}</Text></Pressable>
-            <Pressable accessibilityLabel={t('discovery.addJourneyA11y', { name: selectedDestination.name })} accessibilityRole="button" onPress={() => onAddJourney?.(selectedDestination.id)} style={styles.addJourneyButton}><Text style={styles.addJourneyButtonText}>{t('discovery.addToJourney')}</Text></Pressable>
+            <View style={styles.destinationActions}>
+              <Pressable accessibilityLabel={t('discovery.saveDreamA11y', { action: saved ? t('common.remove') : t('common.save'), direction: saved ? t('discovery.removeDirection') : t('discovery.addDirection'), name: selectedDestination.name })} accessibilityRole="button" onPress={() => onToggleFavourite(selectedDestination.id)} style={[styles.saveButton, saved && styles.removeButton]}><Text style={[styles.saveButtonText, saved && styles.removeButtonText]}>{saved ? t('discovery.removeFromDream') : t('discovery.saveToDream')}</Text></Pressable>
+              <Pressable accessibilityLabel={t('discovery.addJourneyA11y', { name: selectedDestination.name })} accessibilityRole="button" onPress={() => onAddJourney?.(selectedDestination.id)} style={styles.addJourneyButton}><Text style={styles.addJourneyButtonText}>{t('discovery.addToJourney')}</Text></Pressable>
+            </View>
             {selectedDestination.imageCredit ? <Pressable accessibilityRole="link" onPress={() => selectedDestination.imageAttributionUrl && Linking.openURL(selectedDestination.imageAttributionUrl)}><Text style={styles.credit}>{selectedDestination.imageCredit}</Text></Pressable> : null}
           </View>
         </View>
@@ -253,32 +281,16 @@ export default function SignatureScreen({
         <View style={styles.passportHeading}>
           <Text style={styles.passportEyebrow}>{t('passport.kicker')}</Text>
           <Text style={styles.passportTitle}>{t('passport.title')}</Text>
+          <Text style={styles.passportSubtitle}>{t('passport.subtitle')}</Text>
         </View>
         {colourPassport?.isEmpty ? (
           <View style={styles.passportEarlyState}>
-            <View style={styles.passportBlankComposition}>
-              <View style={styles.passportBlankTall} />
-              <View style={styles.passportBlankShort} />
-            </View>
+            {renderWatercolourArtwork(EARLY_PASSPORT_WASHES)}
             <Text style={styles.passportEmpty}>{t('passport.empty')}</Text>
           </View>
         ) : (
           <>
-            {passportComposition.length ? (
-              <View accessibilityLabel={t('passport.paletteA11y')} style={styles.passportComposition}>
-                {passportComposition.map((hex, index) => (
-                  <View
-                    accessibilityLabel={t('passport.swatchA11y', { color: hex })}
-                    key={hex}
-                    style={[
-                      styles.passportColourField,
-                      index === 0 && styles.passportColourFieldPrimary,
-                      { backgroundColor: hex },
-                    ]}
-                  />
-                ))}
-              </View>
-            ) : null}
+            {passportComposition.length ? renderWatercolourArtwork(passportComposition) : null}
             {(() => {
               const narrative = getPassportNarrative(colourPassport);
               if (!narrative) return null;
@@ -343,7 +355,7 @@ export default function SignatureScreen({
 const styles = StyleSheet.create({
   intro: { marginBottom: 26, paddingTop: 14 },
   eyebrow: { color: '#766F68', fontSize: 10, fontWeight: '700', letterSpacing: 1.8, textTransform: 'uppercase' },
-  pageTitle: { color: '#1C2426', fontSize: 41, fontWeight: '700', letterSpacing: -1, lineHeight: 46, marginTop: 9 },
+  pageTitle: { color: '#1C2426', fontFamily: EDITORIAL_SERIF, fontSize: 41, fontWeight: '700', letterSpacing: -1, lineHeight: 46, marginTop: 9 },
   pageSubtitle: { color: '#5E625F', fontSize: 16, lineHeight: 24, marginTop: 10, maxWidth: 340 },
   modeSwitch: { alignSelf: 'flex-start', borderBottomColor: '#D7D0C7', borderBottomWidth: 1, flexDirection: 'row', marginBottom: 22 },
   modeButton: { alignItems: 'center', minHeight: 44, paddingHorizontal: 14, paddingVertical: 12 },
@@ -365,7 +377,7 @@ const styles = StyleSheet.create({
   budgetButtonText: { color: '#66625E', fontSize: 10, fontWeight: '700' },
   budgetButtonTextSelected: { color: '#FFFFFF' },
   identityCard: { borderRadius: 16, marginBottom: 30, padding: 24 },
-  identityTitle: { color: '#1C2426', fontSize: 34, fontWeight: '700', letterSpacing: -0.5, marginTop: 7 },
+  identityTitle: { color: '#1C2426', fontFamily: EDITORIAL_SERIF, fontSize: 34, fontWeight: '700', letterSpacing: -0.5, marginTop: 7 },
   identityDescription: { color: '#3E4747', fontSize: 15, lineHeight: 23, marginTop: 9 },
   resultsTitle: { color: '#1C2426', fontSize: 25, fontWeight: '700', letterSpacing: -0.3, marginBottom: 16 },
   destinationCard: { backgroundColor: '#FFFCF7', borderRadius: 16, elevation: 2, marginBottom: 24, overflow: 'hidden', shadowColor: '#2C2925', shadowOffset: { height: 5, width: 0 }, shadowOpacity: 0.09, shadowRadius: 14 },
@@ -374,7 +386,7 @@ const styles = StyleSheet.create({
   destinationBody: { padding: 20 },
   destinationHeading: { alignItems: 'flex-start', flexDirection: 'row', gap: 10, justifyContent: 'space-between' },
   destinationCopy: { flex: 1 },
-  destinationName: { color: '#1C2426', fontSize: 31, fontWeight: '700', letterSpacing: -0.6, marginTop: 6 },
+  destinationName: { color: '#1C2426', fontFamily: EDITORIAL_SERIF, fontSize: 31, fontWeight: '700', letterSpacing: -0.6, marginTop: 6 },
   compactName: { fontSize: 27 },
   destinationCountry: { color: '#77736E', fontSize: 14, fontWeight: '500', marginTop: 2 },
   destinationDescription: { color: '#535B59', fontSize: 14, lineHeight: 22, marginTop: 14 },
@@ -387,15 +399,17 @@ const styles = StyleSheet.create({
   reasonText: { color: '#5D554E', fontSize: 13, fontStyle: 'italic', lineHeight: 20, marginTop: 5 },
   paletteRow: { flexDirection: 'row', gap: 5, marginTop: 18 },
   swatch: { flex: 1, height: 44 },
+  signaturePaletteRow: { gap: 12, justifyContent: 'flex-start' },
+  signatureSwatch: { borderColor: '#FFFCF7', borderRadius: 30, borderWidth: 3, flex: 0, height: 58, shadowColor: '#2C2925', shadowOffset: { height: 2, width: 0 }, shadowOpacity: 0.12, shadowRadius: 5, width: 58 },
   emptyCard: { alignItems: 'center', backgroundColor: '#FFFCF7', borderRadius: 16, padding: 32 },
   emptyTitle: { color: '#1C2426', fontSize: 23, fontWeight: '700', textAlign: 'center' },
   emptyCopy: { color: '#77736E', fontSize: 14, lineHeight: 22, marginTop: 9, textAlign: 'center' },
   backButton: { alignSelf: 'flex-start', minHeight: 44, marginBottom: 12, paddingVertical: 12 },
   backButtonText: { color: '#1C2426', fontSize: 14, fontWeight: '700' },
   detailCard: { backgroundColor: '#FFFCF7', borderRadius: 18, overflow: 'hidden' },
-  detailBody: { padding: 24 },
+  detailBody: { backgroundColor: '#F8F1E6', borderTopLeftRadius: 30, borderTopRightRadius: 30, marginTop: -34, paddingBottom: 26, paddingHorizontal: 24, paddingTop: 36, zIndex: 2 },
   detailKicker: { color: '#766F68', fontSize: 10, fontWeight: '700', letterSpacing: 1.7, textTransform: 'uppercase' },
-  detailTitle: { color: '#1C2426', fontSize: 43, fontWeight: '700', letterSpacing: -1.1, lineHeight: 48, marginTop: 7 },
+  detailTitle: { color: '#1C2426', fontFamily: EDITORIAL_SERIF, fontSize: 43, fontWeight: '700', letterSpacing: -1.1, lineHeight: 48, marginTop: 7 },
   detailCountry: { color: '#77736E', fontSize: 18, fontWeight: '500', marginTop: 3 },
   detailMemoryMessage: { borderLeftColor: '#8C6B96', borderLeftWidth: 3, color: '#68427A', fontSize: 15, fontStyle: 'italic', lineHeight: 22, marginTop: 20, paddingLeft: 13 },
   vibeLine: { color: '#8D4F5B', fontSize: 11, fontWeight: '700', letterSpacing: 1.2, marginTop: 22, textTransform: 'uppercase' },
@@ -407,12 +421,13 @@ const styles = StyleSheet.create({
   factValue: { color: '#343C3C', fontSize: 15, fontWeight: '600', marginTop: 4 },
   sourceNote: { color: '#8A857F', fontSize: 10, marginTop: 4 },
   guidanceNote: { color: '#817A72', fontSize: 11, fontStyle: 'italic', lineHeight: 16, marginTop: 4 },
-  saveButton: { alignItems: 'center', backgroundColor: '#1C2426', borderRadius: 12, marginTop: 30, minHeight: 48, padding: 14 },
-  saveButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  destinationActions: { borderTopColor: '#DCD4CA', borderTopWidth: 1, marginTop: 30, paddingTop: 22 },
+  saveButton: { alignItems: 'center', borderColor: '#1C2426', borderRadius: 12, borderWidth: 1, minHeight: 48, padding: 14 },
+  saveButtonText: { color: '#1C2426', fontSize: 14, fontWeight: '700' },
   removeButton: { backgroundColor: '#FBEDED', borderColor: '#D92D20', borderWidth: 1 },
   removeButtonText: { color: '#A61B1B' },
-  addJourneyButton: { alignItems: 'center', borderColor: '#1C2426', borderRadius: 12, borderWidth: 1, marginTop: 10, minHeight: 48, padding: 14 },
-  addJourneyButtonText: { color: '#1C2426', fontSize: 14, fontWeight: '700' },
+  addJourneyButton: { alignItems: 'center', backgroundColor: '#1C2426', borderRadius: 12, marginTop: 10, minHeight: 48, padding: 14 },
+  addJourneyButtonText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
   credit: { color: '#817A72', fontSize: 11, marginTop: 16, textAlign: 'center', textDecorationLine: 'underline' },
   relatedSection: { marginTop: 34 },
   insightsCard: { borderBottomColor: '#DCD4CA', borderBottomWidth: 1, borderTopColor: '#DCD4CA', borderTopWidth: 1, marginBottom: 30, paddingVertical: 24 },
@@ -426,27 +441,25 @@ const styles = StyleSheet.create({
   darkButton: { backgroundColor: '#1C2426', borderRadius: 10, marginTop: 18, paddingHorizontal: 18, paddingVertical: 13 },
   darkButtonText: { color: '#FFFFFF', fontWeight: '700' },
   inspiredSection: { borderTopColor: '#B8AA99', borderTopWidth: 1, marginTop: 42, paddingTop: 30 },
-  inspiredTitle: { color: '#1C2426', fontSize: 35, fontWeight: '700', letterSpacing: -0.7, marginTop: 7 },
+  inspiredTitle: { color: '#1C2426', fontFamily: EDITORIAL_SERIF, fontSize: 35, fontWeight: '700', letterSpacing: -0.7, marginTop: 7 },
   inspiredCopy: { color: '#5E625F', fontSize: 15, lineHeight: 23, marginBottom: 22, marginTop: 9, maxWidth: 330 },
-  passportCard: { backgroundColor: '#20282A', borderRadius: 20, marginBottom: 32, overflow: 'hidden', padding: 24 },
+  passportCard: { backgroundColor: '#FBF5EA', borderColor: '#E1D5C6', borderRadius: 24, borderWidth: 1, elevation: 2, marginBottom: 34, overflow: 'hidden', padding: 22, shadowColor: '#493F36', shadowOffset: { height: 5, width: 0 }, shadowOpacity: 0.09, shadowRadius: 15 },
   passportHeading: { marginBottom: 20 },
-  passportEyebrow: { color: '#BDC7C6', fontSize: 10, fontWeight: '700', letterSpacing: 1.8, textTransform: 'uppercase' },
-  passportTitle: { color: '#FFFFFF', fontSize: 34, fontWeight: '700', letterSpacing: -0.6, marginTop: 7 },
-  passportComposition: { flexDirection: 'row', gap: 4, height: 154, marginHorizontal: -24 },
-  passportColourField: { flex: 1 },
-  passportColourFieldPrimary: { flex: 2.2 },
-  passportNarrative: { color: '#FFFFFF', fontSize: 22, fontWeight: '600', lineHeight: 31, marginTop: 24 },
+  passportEyebrow: { color: '#7D7066', fontSize: 10, fontWeight: '700', letterSpacing: 1.8, textTransform: 'uppercase' },
+  passportTitle: { color: '#252B2B', fontFamily: EDITORIAL_SERIF, fontSize: 35, fontWeight: '700', letterSpacing: -0.7, marginTop: 7 },
+  passportSubtitle: { color: '#7A7068', fontFamily: EDITORIAL_SERIF, fontSize: 16, fontStyle: 'italic', marginTop: 5 },
+  watercolourArtwork: { backgroundColor: '#F5ECDF', borderRadius: 24, height: 254, overflow: 'hidden', position: 'relative' },
+  watercolourWash: { borderRadius: 999, opacity: 0.3, overflow: 'hidden', position: 'absolute' },
+  watercolourBloom: { borderRadius: 999, flex: 1, margin: 18, opacity: 0.26 },
+  passportNarrative: { color: '#3B4140', fontFamily: EDITORIAL_SERIF, fontSize: 22, fontStyle: 'italic', fontWeight: '500', lineHeight: 31, marginTop: 24 },
   passportFacts: { marginTop: 24 },
-  passportFact: { alignItems: 'center', borderTopColor: 'rgba(255,255,255,0.18)', borderTopWidth: 1, flexDirection: 'row', gap: 13, paddingVertical: 14 },
-  passportFactSwatch: { borderColor: 'rgba(255,255,255,0.45)', borderRadius: 24, borderWidth: 1, height: 46, width: 46 },
+  passportFact: { alignItems: 'center', borderTopColor: '#DDD1C3', borderTopWidth: 1, flexDirection: 'row', gap: 13, paddingVertical: 14 },
+  passportFactSwatch: { borderColor: '#FFFFFF', borderRadius: 24, borderWidth: 2, height: 46, width: 46 },
   passportFactCopy: { flex: 1 },
-  passportFactLabel: { color: '#BDC7C6', fontSize: 10, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase' },
-  passportFactValue: { color: '#FFFFFF', fontSize: 18, fontWeight: '600', marginTop: 4 },
-  passportMood: { borderTopColor: 'rgba(255,255,255,0.18)', borderTopWidth: 1, paddingTop: 18 },
-  passportMoodValue: { color: '#F2DCCB', fontSize: 30, fontStyle: 'italic', fontWeight: '500', marginTop: 5 },
+  passportFactLabel: { color: '#7D7066', fontSize: 10, fontWeight: '700', letterSpacing: 0.9, textTransform: 'uppercase' },
+  passportFactValue: { color: '#303636', fontFamily: EDITORIAL_SERIF, fontSize: 18, fontWeight: '600', marginTop: 4 },
+  passportMood: { borderTopColor: '#DDD1C3', borderTopWidth: 1, paddingTop: 18 },
+  passportMoodValue: { color: '#775A67', fontFamily: EDITORIAL_SERIF, fontSize: 30, fontStyle: 'italic', fontWeight: '500', marginTop: 5 },
   passportEarlyState: { paddingTop: 4 },
-  passportBlankComposition: { flexDirection: 'row', gap: 5, height: 110, marginHorizontal: -24 },
-  passportBlankTall: { backgroundColor: '#465052', flex: 2 },
-  passportBlankShort: { backgroundColor: '#6D7778', flex: 1 },
-  passportEmpty: { color: '#E2E7E6', fontSize: 16, lineHeight: 24, marginTop: 22 },
+  passportEmpty: { color: '#615C57', fontFamily: EDITORIAL_SERIF, fontSize: 17, fontStyle: 'italic', lineHeight: 25, marginTop: 22 },
 });

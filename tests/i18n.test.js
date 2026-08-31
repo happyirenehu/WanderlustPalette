@@ -46,6 +46,8 @@ describe('localization lookup and fallback', () => {
     expect(translate('zh-Hant', 'dream.becameMemory')).toBe('夢想成為了回憶');
     expect(translate('en', 'personalization.title')).toBe('Inspired by You');
     expect(translate('zh-Hant', 'passport.title')).toBe('我的色彩護照');
+    expect(translate('en', 'passport.subtitle')).toBe('Your colours. Your story.');
+    expect(translate('zh-Hant', 'passport.subtitle')).toBe('你的色彩，你的故事。');
   });
 
   test('has complete Traditional Chinese coverage for the supported English surface', () => {

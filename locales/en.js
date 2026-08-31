@@ -127,6 +127,7 @@ const en = {
   passport: {
     kicker: 'A PERSONAL TRAVEL IDENTITY',
     title: 'My Colour Passport',
+    subtitle: 'Your colours. Your story.',
     empty: 'Choose travel moods, save Dreams, and add Journey colours. Your personal travel identity will take shape here.',
     contrast: 'You dream in {dream}, but remember in {memory}.',
     sharedColor: '{color} connects the places you dream about and remember.',

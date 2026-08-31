@@ -17,4 +17,18 @@ describe('D3 presentation boundaries', () => {
     expect(homeSource).toContain('renderJourneyCover(journey, styles.image)');
     expect(homeSource).toContain('styles.journeyPaletteCover');
   });
+
+  test('Destination detail keeps stable identity and adds no unsupported match data', () => {
+    expect(signatureSource).toContain('{selectedDestination.name}');
+    expect(signatureSource).toContain('{selectedDestination.country}');
+    expect(signatureSource).toContain('styles.detailBody');
+    expect(signatureSource).not.toContain('94%');
+    expect(signatureSource).not.toContain('matchPercentage');
+  });
+
+  test('Passport artwork and narrative remain derived from existing evidence', () => {
+    expect(signatureSource).toContain('getPassportNarrative(colourPassport)');
+    expect(signatureSource).toContain('colourPassport?.representativePalette');
+    expect(signatureSource).toContain('renderWatercolourArtwork(passportComposition)');
+  });
 });

@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -46,6 +47,7 @@ import {
 } from '../utils/journeyPaletteSuggestion.js';
 
 const APP_BACKGROUND = '#F4F0E8';
+const EDITORIAL_SERIF = Platform.select({ ios: 'Georgia', default: 'serif' });
 const EMPTY_FORM = { destination: '', country: '', date: '', notes: '' };
 const EMPTY_EXPENSE_FORM = { amount: '', category: '', id: '' };
 
@@ -1005,7 +1007,7 @@ const styles = StyleSheet.create({
   headerRow: { alignItems: 'flex-end', flexDirection: 'row', gap: 14, justifyContent: 'space-between', marginBottom: 30, paddingTop: 16 },
   headerCopy: { flex: 1 },
   kicker: { color: '#766F68', fontSize: 10, fontWeight: '700', letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' },
-  title: { color: '#1C2426', fontSize: 43, fontWeight: '700', letterSpacing: -1 },
+  title: { color: '#1C2426', fontFamily: EDITORIAL_SERIF, fontSize: 43, fontWeight: '700', letterSpacing: -1 },
   subtitle: { color: '#5E625F', fontSize: 16, lineHeight: 23, marginTop: 7 },
   primaryButton: { backgroundColor: '#1C2426', borderRadius: 12, minHeight: 46, paddingHorizontal: 17, paddingVertical: 13 },
   primaryButtonWide: { alignItems: 'center', backgroundColor: '#1C2426', borderRadius: 12, marginTop: 12, minHeight: 50, padding: 15 },
@@ -1020,7 +1022,7 @@ const styles = StyleSheet.create({
   imageFallbackText: { color: '#667085', fontSize: 13, fontWeight: '700' },
   cardBody: { padding: 20 },
   cardDate: { color: '#817A72', fontSize: 10, fontWeight: '700', letterSpacing: 1.6, textTransform: 'uppercase' },
-  location: { color: '#1C2426', fontSize: 31, fontWeight: '700', letterSpacing: -0.5, marginTop: 7 },
+  location: { color: '#1C2426', fontFamily: EDITORIAL_SERIF, fontSize: 31, fontWeight: '700', letterSpacing: -0.5, marginTop: 7 },
   country: { color: '#77736E', fontSize: 15, fontWeight: '500', marginTop: 2 },
   description: { color: '#555D5B', fontSize: 14, fontStyle: 'italic', lineHeight: 21, marginTop: 11 },
   paletteRow: { flexDirection: 'row', gap: 5, marginTop: 12 },
@@ -1036,7 +1038,7 @@ const styles = StyleSheet.create({
   detailImage: { aspectRatio: 1.05, backgroundColor: '#CBD5E0', width: '100%' },
   detailAtmosphere: { paddingBottom: 25, paddingHorizontal: 22, paddingTop: 22 },
   detailDate: { fontSize: 10, fontWeight: '700', letterSpacing: 1.6, opacity: 0.82, textTransform: 'uppercase' },
-  detailTitle: { fontSize: 39, fontWeight: '700', letterSpacing: -0.8, lineHeight: 44, marginTop: 7 },
+  detailTitle: { fontFamily: EDITORIAL_SERIF, fontSize: 39, fontWeight: '700', letterSpacing: -0.8, lineHeight: 44, marginTop: 7 },
   detailCountry: { fontSize: 18, fontWeight: '500', marginTop: 3, opacity: 0.84 },
   detailContent: { padding: 22 },
   memoryLabel: { color: '#817A72', fontSize: 10, fontWeight: '700', letterSpacing: 1.4, marginTop: 6, textTransform: 'uppercase' },
@@ -1080,7 +1082,7 @@ const styles = StyleSheet.create({
   deleteButton: { alignItems: 'center', backgroundColor: '#FDECEC', borderRadius: 8, flex: 1, padding: 13 },
   deleteButtonText: { color: '#A61B1B', fontWeight: '700' },
   formCard: { backgroundColor: '#FFFCF7', borderRadius: 18, padding: 22 },
-  formTitle: { color: '#1C2426', fontSize: 34, fontWeight: '700', letterSpacing: -0.5 },
+  formTitle: { color: '#1C2426', fontFamily: EDITORIAL_SERIF, fontSize: 34, fontWeight: '700', letterSpacing: -0.5 },
   formSubtitle: { color: '#77736E', fontSize: 14, marginBottom: 26, marginTop: 7 },
   linkedDestination: { backgroundColor: '#E8F1EC', borderRadius: 7, color: '#28533C', fontSize: 13, fontWeight: '800', marginBottom: 18, overflow: 'hidden', padding: 11 },
   field: { marginBottom: 20 },
