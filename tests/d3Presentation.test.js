@@ -3,6 +3,9 @@ import path from 'path';
 
 const homeSource = fs.readFileSync(path.join(__dirname, '..', 'screens', 'HomeScreen.js'), 'utf8');
 const signatureSource = fs.readFileSync(path.join(__dirname, '..', 'screens', 'SignatureScreen.js'), 'utf8');
+const hybridNavigationSource = fs.readFileSync(path.join(__dirname, '..', 'utils', 'hybridNavigation.js'), 'utf8');
+const enSource = fs.readFileSync(path.join(__dirname, '..', 'locales', 'en.js'), 'utf8');
+const zhHantSource = fs.readFileSync(path.join(__dirname, '..', 'locales', 'zh-Hant.js'), 'utf8');
 
 describe('D3 presentation boundaries', () => {
   test('Journey atmosphere is local and cannot persist a global palette theme', () => {
@@ -46,8 +49,8 @@ describe('D3 presentation boundaries', () => {
   test('destination detail removes global chrome while retaining an accessible safe-area back action', () => {
     expect(homeSource).toContain("edges={isDestinationDetail ? ['right', 'bottom', 'left']");
     expect(homeSource).toContain('contentInsetAdjustmentBehavior="never"');
-    expect(homeSource).toContain('!isDestinationDetail ? <View accessibilityLabel={t(\'language.controlLabel\')}');
-    expect(homeSource).toContain('!isDestinationDetail ? <View accessibilityLabel={t(\'nav.label\')}');
+    expect(homeSource).toContain('const isTopLevelPresentation = !isDestinationDetail');
+    expect(homeSource).toContain("isTopLevelPresentation ? renderSectionNavigation('top', handleTopNavigationLayout)");
     expect(signatureSource).toContain('onDestinationStateChange?.(isOpen)');
     expect(signatureSource).toContain("accessibilityLabel={t('common.back')}");
     expect(signatureSource).toContain('style={[styles.heroBackButton, { top: insets.top + 10 }]}');
@@ -147,5 +150,50 @@ describe('D3 presentation boundaries', () => {
       resultsLayoutSource.indexOf('onRecommendationReady?.(resultsY.current)'),
     );
     expect(signatureSource).toContain('const selectedExplorationId = discoveryMode === \'color\'');
+  });
+
+  test('hybrid navigation is one shared renderer using the existing section state and handler', () => {
+    expect(homeSource.match(/const \[section, setSection\]/g)).toHaveLength(1);
+    expect(homeSource).toContain("renderSectionNavigation('top', handleTopNavigationLayout)");
+    expect(homeSource).toContain("renderSectionNavigation('bottom')");
+    expect(homeSource).toContain('const selected = section === id');
+    expect(homeSource).toContain('onPress={() => navigateToSection(id)}');
+    expect(homeSource).not.toContain('activeSection');
+  });
+
+  test('global navigation is limited to top-level Discover, Journey list, and Passport presentations', () => {
+    expect(homeSource).toContain("&& (section !== 'journeys' || screen === 'list')");
+    expect(homeSource).toContain("{isTopLevelPresentation ? renderSectionNavigation('top', handleTopNavigationLayout) : null}");
+    expect(homeSource).toContain("{section === 'journeys' && screen === 'detail' ? renderDetail() : null}");
+    expect(homeSource).toContain("{section === 'journeys' && screen === 'form' ? renderForm() : null}");
+  });
+
+  test('bottom navigation eligibility comes from measured layout without viewport magic numbers', () => {
+    expect(homeSource).toContain('topNavigationBoundaryRef.current = y + height');
+    expect(homeSource).toContain('topNavigationHeight: topNavigationHeightRef.current');
+    expect(hybridNavigationSource).toContain('topNavigationHeight * HYSTERESIS_RATIO');
+    expect(hybridNavigationSource).not.toMatch(/scrollY\s*>\s*(100|150)/);
+    expect(homeSource).not.toContain('screenHeight');
+    expect(homeSource).not.toContain('Dimensions.get');
+    expect(homeSource).not.toContain('setTimeout(');
+  });
+
+  test('bottom utility navigation is an isolated safe-area overlay with measured content clearance', () => {
+    expect(homeSource).toContain("position: 'absolute'");
+    expect(homeSource).toContain('paddingBottom: insets.bottom');
+    expect(homeSource).toContain('pointerEvents={isBottomNavigationVisible');
+    expect(homeSource).toContain('height: bottomNavigationHeight');
+    expect(homeSource).toContain("maxWidth: 560, width: '100%'");
+  });
+
+  test('navigation labels remain localized and selected state is an underline rather than a dark fill', () => {
+    expect(enSource).toContain("discover: 'Discover'");
+    expect(enSource).toContain("journeys: 'Journeys'");
+    expect(enSource).toContain("passport: 'Passport'");
+    expect(zhHantSource).toContain("discover: '探索'");
+    expect(zhHantSource).toContain("journeys: '旅程'");
+    expect(zhHantSource).toContain("passport: '色彩護照'");
+    expect(homeSource).toContain("sectionTabSelected: { borderBottomColor: '#1C2426' }");
+    expect(homeSource).not.toMatch(/sectionTabSelected:\s*\{[^}]*backgroundColor/);
   });
 });

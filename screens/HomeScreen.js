@@ -11,7 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import mockData from '../assets/mockData.json';
 import SignatureScreen from './SignatureScreen.js';
@@ -45,6 +45,7 @@ import {
   resolvePhotoPalette,
   validateJourneyPalette,
 } from '../utils/journeyPaletteSuggestion.js';
+import getHybridNavigationVisibility from '../utils/hybridNavigation.js';
 
 const APP_BACKGROUND = '#F4F0E8';
 const EDITORIAL_SERIF = Platform.select({ ios: 'Georgia', default: 'serif' });
@@ -52,6 +53,7 @@ const EMPTY_FORM = { destination: '', country: '', date: '', notes: '' };
 const EMPTY_EXPENSE_FORM = { amount: '', category: '', id: '' };
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const {
     clearLanguageError,
     formatCountry,
@@ -69,6 +71,9 @@ export default function HomeScreen() {
   const journeyReturnYRef = useRef(0);
   const destinationDetailRef = useRef(false);
   const pendingNavigationScrollYRef = useRef(null);
+  const topNavigationBoundaryRef = useRef(null);
+  const topNavigationHeightRef = useRef(0);
+  const bottomNavigationVisibleRef = useRef(false);
   const sampleJourneys = useMemo(() => normalizeJourneys(mockData), []);
   const [journeys, setJourneys] = useState(sampleJourneys);
   const [hasStoredJourneys, setHasStoredJourneys] = useState(false);
@@ -102,6 +107,8 @@ export default function HomeScreen() {
   const recentVibeSaveQueueRef = useRef(Promise.resolve());
   const [recentVibeStorageError, setRecentVibeStorageError] = useState('');
   const [isDestinationDetail, setIsDestinationDetail] = useState(false);
+  const [isBottomNavigationVisible, setIsBottomNavigationVisible] = useState(false);
+  const [bottomNavigationHeight, setBottomNavigationHeight] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -163,6 +170,8 @@ export default function HomeScreen() {
     profile: preferenceProfile,
     journeys: personalizationJourneys,
   }), [personalizationJourneys, preferenceProfile]);
+  const isTopLevelPresentation = !isDestinationDetail
+    && (section !== 'journeys' || screen === 'list');
   const scrollToDiscoveryResults = useCallback((y) => {
     scrollViewRef.current?.scrollTo({ animated: true, y: Math.max(0, y - 8) });
   }, []);
@@ -203,6 +212,41 @@ export default function HomeScreen() {
     scrollViewRef.current?.scrollTo({ animated: false, y: targetY });
     currentScrollYRef.current = targetY;
   }, [isDestinationDetail, screen, section, selectedId]);
+
+  const updateBottomNavigationVisibility = useCallback((scrollY) => {
+    const nextVisible = isTopLevelPresentation && getHybridNavigationVisibility({
+      isVisible: bottomNavigationVisibleRef.current,
+      scrollY,
+      topNavigationBoundary: topNavigationBoundaryRef.current,
+      topNavigationHeight: topNavigationHeightRef.current,
+    });
+    if (nextVisible === bottomNavigationVisibleRef.current) return;
+    bottomNavigationVisibleRef.current = nextVisible;
+    setIsBottomNavigationVisible(nextVisible);
+  }, [isTopLevelPresentation]);
+
+  const handleAppScroll = useCallback((event) => {
+    const scrollY = Math.max(0, event.nativeEvent.contentOffset.y);
+    currentScrollYRef.current = scrollY;
+    updateBottomNavigationVisibility(scrollY);
+  }, [updateBottomNavigationVisibility]);
+
+  const handleTopNavigationLayout = useCallback((event) => {
+    const { height, y } = event.nativeEvent.layout;
+    if (!Number.isFinite(height) || height <= 0 || !Number.isFinite(y)) return;
+    topNavigationHeightRef.current = height;
+    topNavigationBoundaryRef.current = y + height;
+    updateBottomNavigationVisibility(currentScrollYRef.current);
+  }, [updateBottomNavigationVisibility]);
+
+  const handleBottomNavigationLayout = useCallback((event) => {
+    const { height } = event.nativeEvent.layout;
+    if (Number.isFinite(height) && height > 0) setBottomNavigationHeight(height);
+  }, []);
+
+  useEffect(() => {
+    updateBottomNavigationVisibility(currentScrollYRef.current);
+  }, [isTopLevelPresentation, section, updateBottomNavigationVisibility]);
 
   const persistJourneys = async (nextJourneys) => {
     const result = await saveJourneys(nextJourneys);
@@ -936,44 +980,16 @@ export default function HomeScreen() {
     </>
   );
 
-  return (
-    <SafeAreaView edges={isDestinationDetail ? ['right', 'bottom', 'left'] : ['top', 'right', 'bottom', 'left']} style={[styles.safeArea, { backgroundColor: APP_BACKGROUND }]}>
-      <ScrollView
-      contentInsetAdjustmentBehavior="never"
-      contentContainerStyle={[styles.content, { backgroundColor: APP_BACKGROUND }]}
-      keyboardShouldPersistTaps="handled"
-      onScroll={(event) => { currentScrollYRef.current = Math.max(0, event.nativeEvent.contentOffset.y); }}
-      ref={scrollViewRef}
-      scrollEventThrottle={16}
-      style={[styles.screen, { backgroundColor: APP_BACKGROUND }]}
+  const renderSectionNavigation = (placement, onLayout) => (
+    <View
+      accessibilityElementsHidden={placement === 'top' && isBottomNavigationVisible}
+      accessibilityLabel={t('nav.label')}
+      accessibilityRole="tablist"
+      importantForAccessibility={placement === 'top' && isBottomNavigationVisible ? 'no-hide-descendants' : 'auto'}
+      onLayout={onLayout}
+      style={[styles.sectionNav, placement === 'bottom' && styles.bottomSectionNav]}
     >
-      {!isDestinationDetail ? <View accessibilityLabel={t('language.controlLabel')} accessibilityRole="tablist" style={styles.languageControl}>
-        {[
-          ['en', t('language.english')],
-          ['zh-Hant', t('language.traditionalChinese')],
-        ].map(([id, label]) => {
-          const selected = locale === id;
-          return (
-            <Pressable
-              accessibilityLabel={`${label}${selected ? `, ${t('language.selected')}` : ''}`}
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-              key={id}
-              onPress={() => setLocale(id)}
-              style={[styles.languageButton, selected && styles.languageButtonSelected]}
-            >
-              <Text style={[styles.languageButtonText, selected && styles.languageButtonTextSelected]}>{label}{selected ? ' ✓' : ''}</Text>
-            </Pressable>
-          );
-        })}
-      </View> : null}
-      {!isDestinationDetail && languageError ? (
-        <View accessibilityRole="alert" style={styles.errorBanner}>
-          <Text style={styles.errorBannerText}>{t(languageError)}</Text>
-          <Pressable onPress={clearLanguageError}><Text style={styles.dismissText}>{t('common.dismiss')}</Text></Pressable>
-        </View>
-      ) : null}
-      {!isDestinationDetail ? <View accessibilityLabel={t('nav.label')} accessibilityRole="tablist" style={styles.sectionNav}>
+      <View style={styles.sectionNavInner}>
         {[
           ['discover', t('nav.discover')],
           ['journeys', t('nav.journeys')],
@@ -993,7 +1009,49 @@ export default function HomeScreen() {
             </Pressable>
           );
         })}
+      </View>
+    </View>
+  );
+
+  return (
+    <View style={[styles.root, { backgroundColor: APP_BACKGROUND }]}>
+      <SafeAreaView edges={isDestinationDetail ? ['right', 'bottom', 'left'] : ['top', 'right', 'bottom', 'left']} style={[styles.safeArea, { backgroundColor: APP_BACKGROUND }]}>
+      <ScrollView
+      contentInsetAdjustmentBehavior="never"
+      contentContainerStyle={[styles.content, { backgroundColor: APP_BACKGROUND }]}
+      keyboardShouldPersistTaps="handled"
+      onScroll={handleAppScroll}
+      ref={scrollViewRef}
+      scrollEventThrottle={16}
+      style={[styles.screen, { backgroundColor: APP_BACKGROUND }]}
+    >
+      {isTopLevelPresentation ? <View accessibilityLabel={t('language.controlLabel')} accessibilityRole="tablist" style={styles.languageControl}>
+        {[
+          ['en', t('language.english')],
+          ['zh-Hant', t('language.traditionalChinese')],
+        ].map(([id, label]) => {
+          const selected = locale === id;
+          return (
+            <Pressable
+              accessibilityLabel={`${label}${selected ? `, ${t('language.selected')}` : ''}`}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
+              key={id}
+              onPress={() => setLocale(id)}
+              style={[styles.languageButton, selected && styles.languageButtonSelected]}
+            >
+              <Text style={[styles.languageButtonText, selected && styles.languageButtonTextSelected]}>{label}{selected ? ' ✓' : ''}</Text>
+            </Pressable>
+          );
+        })}
       </View> : null}
+      {isTopLevelPresentation && languageError ? (
+        <View accessibilityRole="alert" style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{t(languageError)}</Text>
+          <Pressable onPress={clearLanguageError}><Text style={styles.dismissText}>{t('common.dismiss')}</Text></Pressable>
+        </View>
+      ) : null}
+      {isTopLevelPresentation ? renderSectionNavigation('top', handleTopNavigationLayout) : null}
       {!isDestinationDetail && section === 'journeys' && storageError ? (
         <View accessibilityRole="alert" style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{localizeMessage(storageError)}</Text>
@@ -1035,12 +1093,31 @@ export default function HomeScreen() {
       {section === 'journeys' && screen === 'list' ? renderList() : null}
       {section === 'journeys' && screen === 'detail' ? renderDetail() : null}
       {section === 'journeys' && screen === 'form' ? renderForm() : null}
+      {isTopLevelPresentation && bottomNavigationHeight > 0
+        ? <View style={{ height: bottomNavigationHeight }} />
+        : null}
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+      {isTopLevelPresentation ? (
+        <View
+          accessibilityElementsHidden={!isBottomNavigationVisible}
+          importantForAccessibility={isBottomNavigationVisible ? 'auto' : 'no-hide-descendants'}
+          onLayout={handleBottomNavigationLayout}
+          pointerEvents={isBottomNavigationVisible ? 'auto' : 'none'}
+          style={[
+            styles.bottomNavigationOverlay,
+            { opacity: isBottomNavigationVisible ? 1 : 0, paddingBottom: insets.bottom },
+          ]}
+        >
+          {renderSectionNavigation('bottom')}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   safeArea: { flex: 1 },
   screen: { flex: 1 },
   content: { flexGrow: 1, paddingBottom: 42, paddingHorizontal: 20, paddingTop: 18 },
@@ -1049,11 +1126,14 @@ const styles = StyleSheet.create({
   languageButtonSelected: { backgroundColor: '#E8DED1' },
   languageButtonText: { color: '#667085', fontSize: 15, fontWeight: '800' },
   languageButtonTextSelected: { color: '#1C2426' },
-  sectionNav: { borderBottomColor: '#D7D0C7', borderBottomWidth: 1, flexDirection: 'row', gap: 2, marginBottom: 26 },
-  sectionTab: { alignItems: 'center', borderBottomColor: 'transparent', borderBottomWidth: 2, flex: 1, justifyContent: 'center', minHeight: 44, paddingHorizontal: 6, paddingVertical: 10 },
+  sectionNav: { borderBottomColor: '#D7D0C7', borderBottomWidth: 1, marginBottom: 26 },
+  sectionNavInner: { alignSelf: 'center', flexDirection: 'row', maxWidth: 560, width: '100%' },
+  sectionTab: { alignItems: 'center', borderBottomColor: 'transparent', borderBottomWidth: 2, flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: 6, paddingVertical: 10 },
   sectionTabSelected: { borderBottomColor: '#1C2426' },
   sectionTabText: { color: '#667085', fontSize: 16, fontWeight: '800', textAlign: 'center' },
   sectionTabTextSelected: { color: '#1C2426' },
+  bottomNavigationOverlay: { backgroundColor: APP_BACKGROUND, borderTopColor: '#D7D0C7', borderTopWidth: 1, bottom: 0, left: 0, position: 'absolute', right: 0, zIndex: 10 },
+  bottomSectionNav: { borderBottomWidth: 0, marginBottom: 0, paddingHorizontal: 20, paddingTop: 6 },
   headerRow: { alignItems: 'flex-end', flexDirection: 'row', gap: 14, justifyContent: 'space-between', marginBottom: 30, paddingTop: 16 },
   headerCopy: { flex: 1 },
   kicker: { color: '#766F68', fontSize: 13, fontWeight: '700', letterSpacing: 1.7, marginBottom: 10, textTransform: 'uppercase' },
