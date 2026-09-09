@@ -34,7 +34,7 @@ describe('curated travel budget model', () => {
   test('filters colour recommendations and safely returns no matches', () => {
     const base = recommendDestinationsByColor('ocean-blue', destinations, colors);
     expect(applyBudgetPreference(base, 'premium').map((item) => item.id)).toEqual(['santorini-greece', 'lofoten-norway', 'queenstown-new-zealand']);
-    expect(applyBudgetPreference(recommendDestinations('calm', destinations, vibes), 'budget')).toEqual([]);
+    expect(applyBudgetPreference(recommendDestinations('calm', destinations, vibes), 'budget').map((item) => item.id)).toEqual(['luang-prabang-laos']);
   });
 
   test('handles malformed catalogues, missing budgets, and invalid preferences safely', () => {

@@ -87,6 +87,20 @@ describe('localized catalogue presentation', () => {
     expect(destinations.map((item) => item.id)).toContain('queenstown-new-zealand');
   });
 
+  test('localizes every expanded destination, country, and curated travel region', () => {
+    expect(formatDestinationName('zh-Hant', 'oaxaca-mexico', 'Oaxaca')).toBe('Oaxaca / 瓦哈卡');
+    expect(formatDestinationName('zh-Hant', 'hoi-an-vietnam', 'Hoi An')).toBe('Hoi An / 會安');
+    expect(formatDestinationName('zh-Hant', 'cape-town-south-africa', 'Cape Town')).toBe('Cape Town / 開普敦');
+    expect(formatDestinationName('zh-Hant', 'luang-prabang-laos', 'Luang Prabang')).toBe('Luang Prabang / 琅勃拉邦');
+    expect(formatCountryName('zh-Hant', 'MX', 'Mexico')).toBe('Mexico / 墨西哥');
+    expect(formatCountryName('zh-Hant', 'VN', 'Vietnam')).toBe('Vietnam / 越南');
+    expect(formatCountryName('zh-Hant', 'ZA', 'South Africa')).toBe('South Africa / 南非');
+    expect(formatCountryName('zh-Hant', 'LA', 'Laos')).toBe('Laos / 寮國');
+    expect(formatTravelRegion('zh-Hant', 'North America')).toBe('北美洲');
+    expect(formatTravelRegion('zh-Hant', 'Southeast Asia')).toBe('東南亞');
+    expect(formatTravelRegion('zh-Hant', 'Southern Africa')).toBe('南部非洲');
+  });
+
   test('localizes only known canonical expense categories and known UI errors', () => {
     expect(formatExpenseCategory('zh-Hant', 'Food')).toBe('餐飲');
     expect(formatExpenseCategory('zh-Hant', 'Museum tickets')).toBe('Museum tickets');

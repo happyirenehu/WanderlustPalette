@@ -57,6 +57,17 @@ describe('Journey destination linkage', () => {
     expect(isJourneyIdentityField('destination')).toBe(true);
     expect(isJourneyIdentityField('country')).toBe(true);
   });
+
+  test('new catalog destinations are valid Dream and Journey stable identities', () => {
+    ['oaxaca-mexico', 'hoi-an-vietnam', 'cape-town-south-africa', 'luang-prabang-laos'].forEach((id) => {
+      expect(normalizeJourneyDestinationId(id)).toBe(id);
+      expect(getDestinationJourneyPrefill(id)?.destinationId).toBe(id);
+    });
+    expect(deriveDreamMemoryDestinationIds(
+      ['oaxaca-mexico'],
+      [{ ...JOURNEY, destinationId: 'oaxaca-mexico' }],
+    )).toEqual(['oaxaca-mexico']);
+  });
 });
 
 describe('Dream to Memory derivation', () => {
