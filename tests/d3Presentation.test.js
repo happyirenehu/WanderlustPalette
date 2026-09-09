@@ -31,17 +31,19 @@ describe('D3 presentation boundaries', () => {
 
   test('Passport artwork and narrative remain derived from existing evidence', () => {
     expect(signatureSource).toContain('getPassportNarrative(colourPassport)');
-    expect(signatureSource).toContain('colourPassport?.representativePalette');
+    expect(signatureSource).toContain('getPassportArtworkPalette(colourPassport)');
     expect(signatureSource).toContain('renderWatercolourArtwork(passportComposition)');
   });
 
-  test('top-level information architecture is Discover, Journeys, then Passport', () => {
+  test('top-level information architecture is Discover, Dreams, Journeys, then Passport', () => {
     const navStart = homeSource.indexOf("['discover', t('nav.discover')]");
-    const journeys = homeSource.indexOf("['journeys', t('nav.journeys')]", navStart);
-    const passport = homeSource.indexOf("['dream', t('nav.passport')]", journeys);
+    const dreams = homeSource.indexOf("['dreams', t('nav.dreams')]", navStart);
+    const journeys = homeSource.indexOf("['journeys', t('nav.journeys')]", dreams);
+    const passport = homeSource.indexOf("['passport', t('nav.passport')]", journeys);
 
     expect(navStart).toBeGreaterThan(-1);
-    expect(journeys).toBeGreaterThan(navStart);
+    expect(dreams).toBeGreaterThan(navStart);
+    expect(journeys).toBeGreaterThan(dreams);
     expect(passport).toBeGreaterThan(journeys);
     expect(homeSource).not.toContain("['nearby'");
   });
@@ -56,14 +58,23 @@ describe('D3 presentation boundaries', () => {
     expect(signatureSource).toContain('style={[styles.heroBackButton, { top: insets.top + 10 }]}');
   });
 
-  test('Passport identity leads and Saved Dreams remains supporting content', () => {
-    const passport = signatureSource.indexOf('style={styles.passportCard}');
-    const savedDreams = signatureSource.indexOf("t('dream.savedDreamsTitle')", passport);
-    const dreamCards = signatureSource.indexOf('dreamDestinations.length', savedDreams);
+  test('Dreams owns saved destinations and travel-style insights while Passport owns only identity', () => {
+    const dreamsStart = signatureSource.indexOf("if (mode === 'dreams') return");
+    const passportStart = signatureSource.indexOf("if (mode === 'passport') return", dreamsStart);
+    const discoverStart = signatureSource.indexOf('const selectedIdentity =', passportStart);
+    const dreamsBranch = signatureSource.slice(dreamsStart, passportStart);
+    const passportBranch = signatureSource.slice(passportStart, discoverStart);
 
-    expect(passport).toBeGreaterThan(-1);
-    expect(savedDreams).toBeGreaterThan(passport);
-    expect(dreamCards).toBeGreaterThan(savedDreams);
+    expect(dreamsStart).toBeGreaterThan(-1);
+    expect(passportStart).toBeGreaterThan(dreamsStart);
+    expect(dreamsBranch).toContain("t('dream.savedDreamsTitle')");
+    expect(dreamsBranch).toContain('dreamDestinations.length');
+    expect(dreamsBranch).toContain("t('dream.styleKicker')");
+    expect(dreamsBranch).not.toContain('styles.passportCard');
+    expect(passportBranch).toContain('styles.passportCard');
+    expect(passportBranch).toContain("t('passport.explanation')");
+    expect(passportBranch).not.toContain("t('dream.savedDreamsTitle')");
+    expect(passportBranch).not.toContain("t('dream.styleKicker')");
   });
 
   test('Inspired by You stays in the discovery flow and has an explicit jump affordance', () => {
@@ -154,6 +165,7 @@ describe('D3 presentation boundaries', () => {
 
   test('hybrid navigation is one shared renderer using the existing section state and handler', () => {
     expect(homeSource.match(/const \[section, setSection\]/g)).toHaveLength(1);
+    expect(homeSource.match(/const \[favouriteIds, setFavouriteIds\]/g)).toHaveLength(1);
     expect(homeSource).toContain("renderSectionNavigation('top', handleTopNavigationLayout)");
     expect(homeSource).toContain("renderSectionNavigation('bottom')");
     expect(homeSource).toContain('const selected = section === id');
@@ -161,11 +173,13 @@ describe('D3 presentation boundaries', () => {
     expect(homeSource).not.toContain('activeSection');
   });
 
-  test('global navigation is limited to top-level Discover, Journey list, and Passport presentations', () => {
+  test('global navigation is limited to top-level Discover, Dreams, Journey list, and Passport presentations', () => {
     expect(homeSource).toContain("&& (section !== 'journeys' || screen === 'list')");
     expect(homeSource).toContain("{isTopLevelPresentation ? renderSectionNavigation('top', handleTopNavigationLayout) : null}");
+    expect(homeSource).toContain("section === 'discover' || section === 'dreams' || section === 'passport'");
     expect(homeSource).toContain("{section === 'journeys' && screen === 'detail' ? renderDetail() : null}");
     expect(homeSource).toContain("{section === 'journeys' && screen === 'form' ? renderForm() : null}");
+    expect(signatureSource).toContain("mode === 'dreams' ? t('nav.dreams') : t('nav.discover')");
   });
 
   test('bottom navigation eligibility comes from measured layout without viewport magic numbers', () => {
@@ -188,12 +202,21 @@ describe('D3 presentation boundaries', () => {
 
   test('navigation labels remain localized and selected state is an underline rather than a dark fill', () => {
     expect(enSource).toContain("discover: 'Discover'");
+    expect(enSource).toContain("dreams: 'Dreams'");
     expect(enSource).toContain("journeys: 'Journeys'");
     expect(enSource).toContain("passport: 'Passport'");
     expect(zhHantSource).toContain("discover: '探索'");
+    expect(zhHantSource).toContain("dreams: '夢想'");
     expect(zhHantSource).toContain("journeys: '旅程'");
     expect(zhHantSource).toContain("passport: '色彩護照'");
     expect(homeSource).toContain("sectionTabSelected: { borderBottomColor: '#1C2426' }");
     expect(homeSource).not.toMatch(/sectionTabSelected:\s*\{[^}]*backgroundColor/);
+  });
+
+  test('four navigation tabs retain readable type and 48-point targets at narrow widths', () => {
+    expect(homeSource).toContain("topSectionNav: { marginHorizontal: -12 }");
+    expect(homeSource).toContain("bottomSectionNav: { borderBottomWidth: 0, marginBottom: 0, paddingHorizontal: 8");
+    expect(homeSource).toContain("sectionTab: { alignItems: 'center', borderBottomColor: 'transparent', borderBottomWidth: 2, flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: 2");
+    expect(homeSource).toContain("sectionTabText: { color: '#667085', fontSize: 16");
   });
 });

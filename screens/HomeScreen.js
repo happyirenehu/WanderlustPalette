@@ -987,13 +987,14 @@ export default function HomeScreen() {
       accessibilityRole="tablist"
       importantForAccessibility={placement === 'top' && isBottomNavigationVisible ? 'no-hide-descendants' : 'auto'}
       onLayout={onLayout}
-      style={[styles.sectionNav, placement === 'bottom' && styles.bottomSectionNav]}
+      style={[styles.sectionNav, placement === 'top' && styles.topSectionNav, placement === 'bottom' && styles.bottomSectionNav]}
     >
       <View style={styles.sectionNavInner}>
         {[
           ['discover', t('nav.discover')],
+          ['dreams', t('nav.dreams')],
           ['journeys', t('nav.journeys')],
-          ['dream', t('nav.passport')],
+          ['passport', t('nav.passport')],
         ].map(([id, label]) => {
           const selected = section === id;
           return (
@@ -1068,7 +1069,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       ) : null}
-      {!isDestinationDetail && section !== 'journeys' && dreamStorageError ? (
+      {!isDestinationDetail && (section === 'discover' || section === 'dreams') && dreamStorageError ? (
         <View accessibilityRole="alert" style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{localizeMessage(dreamStorageError)}</Text>
           <Pressable onPress={() => setDreamStorageError('')}>
@@ -1076,7 +1077,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
       ) : null}
-      {section === 'discover' || section === 'dream' ? (
+      {section === 'discover' || section === 'dreams' || section === 'passport' ? (
         <SignatureScreen
           colourPassport={colourPassport}
           favouriteIds={favouriteIds}
@@ -1128,12 +1129,13 @@ const styles = StyleSheet.create({
   languageButtonTextSelected: { color: '#1C2426' },
   sectionNav: { borderBottomColor: '#D7D0C7', borderBottomWidth: 1, marginBottom: 26 },
   sectionNavInner: { alignSelf: 'center', flexDirection: 'row', maxWidth: 560, width: '100%' },
-  sectionTab: { alignItems: 'center', borderBottomColor: 'transparent', borderBottomWidth: 2, flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: 6, paddingVertical: 10 },
+  sectionTab: { alignItems: 'center', borderBottomColor: 'transparent', borderBottomWidth: 2, flex: 1, justifyContent: 'center', minHeight: 48, paddingHorizontal: 2, paddingVertical: 10 },
   sectionTabSelected: { borderBottomColor: '#1C2426' },
   sectionTabText: { color: '#667085', fontSize: 16, fontWeight: '800', textAlign: 'center' },
   sectionTabTextSelected: { color: '#1C2426' },
   bottomNavigationOverlay: { backgroundColor: APP_BACKGROUND, borderTopColor: '#D7D0C7', borderTopWidth: 1, bottom: 0, left: 0, position: 'absolute', right: 0, zIndex: 10 },
-  bottomSectionNav: { borderBottomWidth: 0, marginBottom: 0, paddingHorizontal: 20, paddingTop: 6 },
+  topSectionNav: { marginHorizontal: -12 },
+  bottomSectionNav: { borderBottomWidth: 0, marginBottom: 0, paddingHorizontal: 8, paddingTop: 6 },
   headerRow: { alignItems: 'flex-end', flexDirection: 'row', gap: 14, justifyContent: 'space-between', marginBottom: 30, paddingTop: 16 },
   headerCopy: { flex: 1 },
   kicker: { color: '#766F68', fontSize: 13, fontWeight: '700', letterSpacing: 1.7, marginBottom: 10, textTransform: 'uppercase' },

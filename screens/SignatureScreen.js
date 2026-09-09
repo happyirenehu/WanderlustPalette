@@ -20,6 +20,7 @@ import {
   getPassportNarrative,
   getRecommendationReasonPresentation,
 } from '../utils/personalizationPresentation.js';
+import getPassportArtworkPalette, { PASSPORT_ARTWORK_NEUTRALS } from '../utils/passportArtwork.js';
 
 const FALLBACK_COLOR = '#E8EEF2';
 const EDITORIAL_SERIF = Platform.select({ ios: 'Georgia', default: 'serif' });
@@ -30,7 +31,6 @@ const WATERCOLOUR_SHAPES = [
   { bottom: 16, height: 92, left: 10, transform: [{ rotate: '-14deg' }], width: 128 },
   { height: 104, right: 26, top: 72, transform: [{ rotate: '16deg' }], width: 136 },
 ];
-const EARLY_PASSPORT_WASHES = ['#B8AAA1', '#C8BDB0', '#A7B4B0'];
 
 export default function SignatureScreen({
   colourPassport,
@@ -116,16 +116,7 @@ export default function SignatureScreen({
       : colorName(presentation.subjectId);
     return t(presentation.key, { name });
   };
-  const passportComposition = (() => {
-    const representative = Array.isArray(colourPassport?.representativePalette)
-      ? colourPassport.representativePalette
-      : [];
-    const supported = [
-      colourPassport?.dream?.dominantColor?.id,
-      colourPassport?.memory?.dominantColor?.id,
-    ].filter(Boolean).map(colorHex);
-    return [...new Set([...representative, ...supported])].slice(0, 5);
-  })();
+  const passportComposition = getPassportArtworkPalette(colourPassport);
   const renderWatercolourArtwork = (palette) => (
     <View accessibilityLabel={t('passport.paletteA11y')} style={styles.watercolourArtwork}>
       {palette.map((hex, index) => (
@@ -257,7 +248,7 @@ export default function SignatureScreen({
 
   const renderDestinationCard = (destination, compact = false, personalizationReasons = []) => {
     const saved = isFavouriteId(favouriteIds, destination.id);
-    const becameMemory = mode === 'dream' && isDreamMemoryDestination(memoryDestinationIds, destination.id);
+    const becameMemory = mode === 'dreams' && isDreamMemoryDestination(memoryDestinationIds, destination.id);
     return (
       <Pressable accessibilityHint={t('discovery.destinationHint')} accessibilityLabel={`${destination.name}, ${destination.country}${saved ? `, ${t('discovery.savedToDream')}` : ''}${becameMemory ? `, ${t('dream.becameMemory')}` : ''}`} accessibilityRole="button" key={destination.id} onPress={() => openDestination(destination.id)} style={({ pressed }) => [styles.destinationCard, compact && styles.compactCard, pressed && styles.pressedCard]}>
         <DestinationImage destination={destination} />
@@ -291,7 +282,7 @@ export default function SignatureScreen({
     const destinationColors = colors.filter((color) => selectedDestination.colorIds.includes(color.id));
     const related = getRelatedDestinations(selectedDestination.id, destinations);
     const saved = isFavouriteId(favouriteIds, selectedDestination.id);
-    const becameMemory = mode === 'dream' && isDreamMemoryDestination(memoryDestinationIds, selectedDestination.id);
+    const becameMemory = mode === 'dreams' && isDreamMemoryDestination(memoryDestinationIds, selectedDestination.id);
     const capitalDisplay = countryFacts?.capitalCity
       ? formatCapital(selectedDestination.countryCode, countryFacts.capitalCity)
       : '';
@@ -306,7 +297,7 @@ export default function SignatureScreen({
             onPress={closeDestination}
             style={[styles.heroBackButton, { top: insets.top + 10 }]}
           >
-            <Text style={styles.heroBackButtonText}>← {mode === 'dream' ? t('nav.passport') : t('nav.discover')}</Text>
+            <Text style={styles.heroBackButtonText}>← {mode === 'dreams' ? t('nav.dreams') : t('nav.discover')}</Text>
           </Pressable>
           <View style={styles.detailBody}>
             <Text style={styles.detailKicker}>{t('discovery.curatedDestination')}</Text><Text style={styles.detailTitle}>{selectedDestination.name}</Text><Text style={styles.detailCountry}>{selectedDestination.country}</Text>
@@ -340,17 +331,26 @@ export default function SignatureScreen({
     );
   }
 
-  if (mode === 'dream') return (
+  if (mode === 'dreams') return (
+    <>
+      <View style={styles.savedDreamsHeader}><Text style={styles.eyebrow}>{t('dream.kicker')}</Text><Text style={styles.savedDreamsTitle}>{t('dream.savedDreamsTitle')}</Text><Text style={styles.pageSubtitle}>{t('dream.subtitle')}</Text></View>
+      {dreamDestinations.length ? dreamDestinations.map((item) => renderDestinationCard(item)) : <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t('dream.emptyTitle')}</Text><Text style={styles.emptyCopy}>{t('dream.emptyCopy')}</Text></View>}
+      {insights.total ? <View accessibilityLabel={t('dream.insightsA11y')} style={styles.insightsCard}><Text style={styles.eyebrow}>{t('dream.styleKicker')}</Text><Text style={styles.insightCount}>{t(insights.total === 1 ? 'dream.savedPlaceOne' : 'dream.savedPlaceOther', { count: insights.total })}</Text><Text style={styles.insightLabel}>{t('dream.strongestVibe')}</Text><Text style={styles.insightValue}>{insights.dominantVibe?.name}</Text><Text style={styles.insightLabel}>{t('dream.colorStory')}</Text><Text style={styles.insightValue}>{insights.dominantColor?.name}</Text><Text style={styles.insightLabel}>{t('dream.typicalBudget')}</Text><Text style={styles.insightValue}>{insights.dominantBudget ? `${insights.dominantBudget.symbol} · ${budgetLabel(insights.dominantBudget.id)}` : t('dream.stillUnfolding')}</Text><Text style={styles.insightLabel}>{t('dream.budgetMix')}</Text>{insights.budgetDistribution.filter((item) => item.count > 0).map((item) => <View key={item.id} style={styles.budgetMixRow}><Text style={styles.budgetMixLabel}>{item.symbol} {budgetLabel(item.id)}</Text><Text style={styles.budgetMixCount}>{item.count}</Text></View>)}<Text style={styles.insightNote}>{t('dream.insightNote')}</Text></View> : null}
+    </>
+  );
+
+  if (mode === 'passport') return (
     <>
       <View accessibilityLabel={t('passport.title')} style={styles.passportCard}>
         <View style={styles.passportHeading}>
           <Text style={styles.passportEyebrow}>{t('passport.kicker')}</Text>
           <Text style={styles.passportTitle}>{t('passport.title')}</Text>
           <Text style={styles.passportSubtitle}>{t('passport.subtitle')}</Text>
+          <Text style={styles.passportExplanation}>{t('passport.explanation')}</Text>
         </View>
         {colourPassport?.isEmpty ? (
           <View style={styles.passportEarlyState}>
-            {renderWatercolourArtwork(EARLY_PASSPORT_WASHES)}
+            {renderWatercolourArtwork(PASSPORT_ARTWORK_NEUTRALS)}
             <Text style={styles.passportEmpty}>{t('passport.empty')}</Text>
           </View>
         ) : (
@@ -372,9 +372,6 @@ export default function SignatureScreen({
           </>
         )}
       </View>
-      <View style={styles.savedDreamsHeader}><Text style={styles.eyebrow}>{t('dream.kicker')}</Text><Text style={styles.savedDreamsTitle}>{t('dream.savedDreamsTitle')}</Text><Text style={styles.pageSubtitle}>{t('dream.subtitle')}</Text></View>
-      {dreamDestinations.length ? dreamDestinations.map((item) => renderDestinationCard(item)) : <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t('dream.emptyTitle')}</Text><Text style={styles.emptyCopy}>{t('dream.emptyCopy')}</Text></View>}
-      {insights.total ? <View accessibilityLabel={t('dream.insightsA11y')} style={styles.insightsCard}><Text style={styles.eyebrow}>{t('dream.styleKicker')}</Text><Text style={styles.insightCount}>{t(insights.total === 1 ? 'dream.savedPlaceOne' : 'dream.savedPlaceOther', { count: insights.total })}</Text><Text style={styles.insightLabel}>{t('dream.strongestVibe')}</Text><Text style={styles.insightValue}>{insights.dominantVibe?.name}</Text><Text style={styles.insightLabel}>{t('dream.colorStory')}</Text><Text style={styles.insightValue}>{insights.dominantColor?.name}</Text><Text style={styles.insightLabel}>{t('dream.typicalBudget')}</Text><Text style={styles.insightValue}>{insights.dominantBudget ? `${insights.dominantBudget.symbol} · ${budgetLabel(insights.dominantBudget.id)}` : t('dream.stillUnfolding')}</Text><Text style={styles.insightLabel}>{t('dream.budgetMix')}</Text>{insights.budgetDistribution.filter((item) => item.count > 0).map((item) => <View key={item.id} style={styles.budgetMixRow}><Text style={styles.budgetMixLabel}>{item.symbol} {budgetLabel(item.id)}</Text><Text style={styles.budgetMixCount}>{item.count}</Text></View>)}<Text style={styles.insightNote}>{t('dream.insightNote')}</Text></View> : null}
     </>
   );
 
@@ -521,6 +518,7 @@ const styles = StyleSheet.create({
   passportEyebrow: { color: '#7D7066', fontSize: 14, fontWeight: '700', letterSpacing: 1.3, textTransform: 'uppercase' },
   passportTitle: { color: '#252B2B', fontFamily: EDITORIAL_SERIF, fontSize: 35, fontWeight: '700', letterSpacing: -0.7, marginTop: 7 },
   passportSubtitle: { color: '#7A7068', fontFamily: EDITORIAL_SERIF, fontSize: 17, fontStyle: 'italic', lineHeight: 24, marginTop: 5 },
+  passportExplanation: { color: '#615C57', fontSize: 16, lineHeight: 24, marginTop: 12 },
   watercolourArtwork: { backgroundColor: '#F5ECDF', borderRadius: 24, height: 254, overflow: 'hidden', position: 'relative' },
   watercolourWash: { borderRadius: 999, opacity: 0.3, overflow: 'hidden', position: 'absolute' },
   watercolourBloom: { borderRadius: 999, flex: 1, margin: 18, opacity: 0.26 },

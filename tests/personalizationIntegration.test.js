@@ -3,8 +3,11 @@ jest.mock('@react-native-async-storage/async-storage', () => (
 ));
 
 import destinations from '../data/destinations';
+import colors from '../data/colors';
+import vibes from '../data/vibes';
 import { getAdaptiveRecommendations } from '../utils/adaptiveRecommendations';
 import { buildColourPassport } from '../utils/colourPassport';
+import getDreamPaletteInsights from '../utils/destinationInsights';
 import { resolveDestinationIds } from '../utils/discovery';
 import { addFavouriteId, removeFavouriteId } from '../utils/dreamPalette';
 import { translate } from '../utils/i18n';
@@ -51,8 +54,16 @@ describe('v0.10 production personalization integration', () => {
     const saved = addFavouriteId([], 'milos-greece');
     const withDream = buildPreferenceProfile({ dreamDestinationIds: saved });
     const withoutDream = buildPreferenceProfile({ dreamDestinationIds: removeFavouriteId(saved, 'milos-greece') });
+    const withDreamInsights = getDreamPaletteInsights(saved, destinations, vibes, colors);
+    const withoutDreamInsights = getDreamPaletteInsights([], destinations, vibes, colors);
+    const withDreamPassport = buildColourPassport({ profile: withDream });
+    const withoutDreamPassport = buildColourPassport({ profile: withoutDream });
     expect(withDream.dreamDestinationIds).toEqual(['milos-greece']);
+    expect(withDreamInsights.total).toBe(1);
+    expect(withDreamPassport.dream.dominantColor).toMatchObject({ id: 'ocean-blue' });
     expect(withoutDream.hasEvidence).toBe(false);
+    expect(withoutDreamInsights.total).toBe(0);
+    expect(withoutDreamPassport.dream.dominantColor).toBeNull();
   });
 
   test('Journey changes update recommendations and supported passport narrative', () => {

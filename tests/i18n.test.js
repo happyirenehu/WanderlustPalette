@@ -48,6 +48,10 @@ describe('localization lookup and fallback', () => {
     expect(translate('zh-Hant', 'passport.title')).toBe('我的色彩護照');
     expect(translate('en', 'passport.subtitle')).toBe('Your colours. Your story.');
     expect(translate('zh-Hant', 'passport.subtitle')).toBe('你的色彩，你的故事。');
+    expect(translate('en', 'nav.dreams')).toBe('Dreams');
+    expect(translate('zh-Hant', 'nav.dreams')).toBe('夢想');
+    expect(translate('en', 'passport.explanation')).toBe('A living colour portrait shaped by your travel dreams and journey memories.');
+    expect(translate('zh-Hant', 'passport.explanation')).toBe('由你的旅行夢想與旅程回憶，逐漸形成的個人旅行色彩輪廓。');
   });
 
   test('has complete Traditional Chinese coverage for the supported English surface', () => {
