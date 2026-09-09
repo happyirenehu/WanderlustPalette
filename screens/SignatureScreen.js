@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import DestinationImage from '../components/DestinationImage.js';
@@ -79,6 +79,8 @@ export default function SignatureScreen({
   const inspiredY = useRef(null);
   const pendingResultsScroll = useRef(false);
   const previousDestinationId = useRef(null);
+  const passportRevealOpacity = useRef(new Animated.Value(0)).current;
+  const passportRevealScale = useRef(new Animated.Value(0.98)).current;
   const selectedVibe = getVibeById(selectedVibeId, vibes);
   const selectedColor = colors.find((item) => item.id === selectedColorId) || null;
   const selectedExplorationId = discoveryMode === 'color' ? selectedColorId : selectedVibeId;
@@ -118,7 +120,13 @@ export default function SignatureScreen({
   };
   const passportComposition = getPassportArtworkPalette(colourPassport);
   const renderWatercolourArtwork = (palette) => (
-    <View accessibilityLabel={t('passport.paletteA11y')} style={styles.watercolourArtwork}>
+    <Animated.View
+      accessibilityLabel={t('passport.paletteA11y')}
+      style={[
+        styles.watercolourArtwork,
+        { opacity: passportRevealOpacity, transform: [{ scale: passportRevealScale }] },
+      ]}
+    >
       {palette.map((hex, index) => (
         <View
           accessibilityLabel={t('passport.swatchA11y', { color: hex })}
@@ -132,7 +140,7 @@ export default function SignatureScreen({
           <View style={[styles.watercolourBloom, { backgroundColor: hex }]} />
         </View>
       ))}
-    </View>
+    </Animated.View>
   );
 
   useEffect(() => {
@@ -140,6 +148,30 @@ export default function SignatureScreen({
     resultsY.current = null;
     inspiredY.current = null;
     setSelectedDestinationId(null);
+  }, [mode]);
+
+  useEffect(() => {
+    passportRevealOpacity.stopAnimation();
+    passportRevealScale.stopAnimation();
+    passportRevealOpacity.setValue(0);
+    passportRevealScale.setValue(0.98);
+
+    if (mode !== 'passport') return undefined;
+
+    const reveal = Animated.parallel([
+      Animated.timing(passportRevealOpacity, {
+        duration: 600,
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(passportRevealScale, {
+        duration: 600,
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+    ]);
+    reveal.start();
+    return () => reveal.stop();
   }, [mode]);
 
   useLayoutEffect(() => {

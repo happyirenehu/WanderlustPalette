@@ -2,6 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
   Image,
   Platform,
   Pressable,
@@ -90,6 +91,8 @@ export default function HomeScreen() {
   const [photoFeedback, setPhotoFeedback] = useState('');
   const [formPalette, setFormPalette] = useState([]);
   const [photoPaletteSuggestion, setPhotoPaletteSuggestion] = useState([]);
+  const paletteRevealOpacity = useRef(new Animated.Value(0)).current;
+  const paletteRevealTranslateY = useRef(new Animated.Value(8)).current;
   const [paletteFeedback, setPaletteFeedback] = useState('');
   const [paletteHasManualEdits, setPaletteHasManualEdits] = useState(false);
   const paletteHasManualEditsRef = useRef(false);
@@ -458,6 +461,34 @@ export default function HomeScreen() {
       hasManualEdits: paletteHasManualEditsRef.current,
     }).palette);
   };
+
+  useEffect(() => {
+    paletteRevealOpacity.stopAnimation();
+    paletteRevealTranslateY.stopAnimation();
+
+    if (photoPaletteSuggestion.length !== 3) {
+      paletteRevealOpacity.setValue(0);
+      paletteRevealTranslateY.setValue(8);
+      return undefined;
+    }
+
+    paletteRevealOpacity.setValue(0);
+    paletteRevealTranslateY.setValue(8);
+    const reveal = Animated.parallel([
+      Animated.timing(paletteRevealOpacity, {
+        duration: 240,
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.timing(paletteRevealTranslateY, {
+        duration: 240,
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]);
+    reveal.start();
+    return () => reveal.stop();
+  }, [photoPaletteSuggestion]);
 
   const acceptPhotoPalette = () => {
     const resolution = resolvePhotoPalette({
@@ -971,7 +1002,15 @@ export default function HomeScreen() {
           {paletteFeedback ? <Text accessibilityRole="status" style={styles.photoFeedback}>{t(paletteFeedback)}</Text> : null}
         </View>
         {photoPaletteSuggestion.length === 3 ? (
-          <View style={styles.suggestedPalette}>
+          <Animated.View
+            style={[
+              styles.suggestedPalette,
+              {
+                opacity: paletteRevealOpacity,
+                transform: [{ translateY: paletteRevealTranslateY }],
+              },
+            ]}
+          >
             <Text style={styles.label}>{t('photo.coloursFromPhoto')}</Text>
             <View style={styles.suggestedPaletteRow}>
               {photoPaletteSuggestion.map((color) => (
@@ -981,7 +1020,7 @@ export default function HomeScreen() {
             <Pressable onPress={acceptPhotoPalette} style={styles.secondaryButtonWide}>
               <Text style={styles.secondaryButtonText}>{t('photo.useColours')}</Text>
             </Pressable>
-          </View>
+          </Animated.View>
         ) : null}
         <View style={styles.paletteEditor}>
           <Text style={styles.label}>{t('photo.paletteField')}</Text>
