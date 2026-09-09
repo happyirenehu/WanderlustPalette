@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
 import { useLanguage } from '../context/LanguageContext.js';
 import getContrastColor from '../utils/accessibility.js';
 import getDisplayImageUri from '../utils/imageSources.js';
 
+export function getDestinationDetailHeroHeight(viewportHeight) {
+  const height = Number(viewportHeight);
+  return Number.isFinite(height) && height > 0 ? Math.round(height * 0.7) : 0;
+}
+
 export default function DestinationImage({ destination, detail = false }) {
   const { t } = useLanguage();
+  const { height: viewportHeight } = useWindowDimensions();
   const imageUri = getDisplayImageUri(destination?.imageUri);
   const fallbackColor = destination?.palette?.[0] || '#E8EEF2';
   const [loading, setLoading] = useState(Boolean(imageUri));
@@ -18,7 +24,7 @@ export default function DestinationImage({ destination, detail = false }) {
   }, [imageUri]);
 
   return (
-    <View style={[styles.frame, detail ? styles.detailFrame : styles.cardFrame, { backgroundColor: fallbackColor }]}>
+    <View style={[styles.frame, detail ? { height: getDestinationDetailHeroHeight(viewportHeight) } : styles.cardFrame, { backgroundColor: fallbackColor }]}>
       {imageUri && !failed ? (
         <Image
           accessibilityLabel={destination.imageAlt || t('images.travelPhoto', { name: destination.name })}
@@ -49,7 +55,6 @@ export default function DestinationImage({ destination, detail = false }) {
 const styles = StyleSheet.create({
   frame: { overflow: 'hidden', width: '100%' },
   cardFrame: { aspectRatio: 1.45 },
-  detailFrame: { aspectRatio: 1.08 },
   loading: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   fallback: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   fallbackText: { fontSize: 14, fontWeight: '900', letterSpacing: 1.8 },
