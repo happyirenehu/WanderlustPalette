@@ -31,6 +31,9 @@ export function getDestinationJourneyPrefill(destinationId, catalogue = destinat
     : null;
 }
 
+// I wrote this:
+// This connects a saved Dream to a real Journey using the destination ID,
+// so changing the language or destination name does not break the link.
 export function deriveDreamMemoryDestinationIds(favouriteIds, journeys, catalogue = destinationsData) {
   const knownDestinations = destinationMap(catalogue);
   const journeyDestinationIds = new Set(

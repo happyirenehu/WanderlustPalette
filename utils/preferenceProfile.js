@@ -47,6 +47,9 @@ function dominant(signals) {
   return signals[0]?.score >= DOMINANT_SCORE ? { id: signals[0].id, score: signals[0].score } : null;
 }
 
+// I wrote this:
+// This builds a simple preference profile from the user's recent vibes,
+// saved Dreams, Journeys and the colours they have collected.
 export function buildPreferenceProfile({
   recentVibeIds = [],
   dreamDestinationIds = [],

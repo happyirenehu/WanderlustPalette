@@ -25,6 +25,9 @@ function splitLegacyLocation(location) {
   };
 }
 
+// I wrote this:
+// This keeps Journey data in a consistent format and handles the main
+// create, update and delete operations without changing the original data.
 export function validateJourneyInput(input = {}) {
   const values = {
     destination: cleanText(input.destination),

@@ -10,6 +10,9 @@ function addMoney(first, second) {
   return Math.round((first + second) * 100) / 100;
 }
 
+// I wrote this:
+// This turns the Journey's expense entries into totals and category
+// summaries that can be shown as travel spending insights.
 export function getExpenseInsights(expenses) {
   const validExpenses = Array.isArray(expenses)
     ? expenses.map(normalizeExpense).filter(Boolean)

@@ -83,6 +83,9 @@ export default function PhotoPaletteExtractor({ request, onComplete }) {
     completedRef.current = false;
     setAnalysis(null);
 
+    // I wrote this:
+    // This prepares a safe, small copy of the photo, checks the temporary file
+    // and makes sure its resources are cleaned up after use.
     const prepareAnalysis = async () => {
       let context;
       let renderedImage;

@@ -24,6 +24,9 @@ function representativePalette(journeys) {
     .slice(0, 5);
 }
 
+// I wrote this:
+// This builds the Colour Passport from what the user has dreamed about
+// and where they have actually travelled, instead of storing a separate copy.
 export function buildColourPassport(input = {}) {
   const profile = input.profile || buildPreferenceProfile(input);
   const dreamColor = topSignal(profile.colorAffinities, 'dreamScore');

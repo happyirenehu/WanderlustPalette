@@ -508,6 +508,9 @@ export default function HomeScreen() {
     }
 
     const previousJourney = editingId ? journeys.find((journey) => journey.id === editingId) : null;
+    // I wrote this:
+    // I save the new Journey first before removing the old photo.
+    // This prevents a failed edit from accidentally losing the user's photo.
     const persistence = await persistJourneys(result.journeys);
     if (!persistence.ok) {
       setFormErrors({ form: persistence.error });

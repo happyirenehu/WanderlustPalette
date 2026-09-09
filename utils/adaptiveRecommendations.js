@@ -37,6 +37,9 @@ function reasonsFor(destination, vibes, colors) {
     .map(({ contribution, ...reason }) => reason);
 }
 
+// I wrote this:
+// This scores destinations using the user's preferences and then explains
+// why each recommendation matches them.
 export function getAdaptiveRecommendations(catalogue, profile, options = {}) {
   const destinations = normalizeDestinations(catalogue);
   const excluded = new Set([
@@ -59,6 +62,7 @@ export function getAdaptiveRecommendations(catalogue, profile, options = {}) {
       index,
     };
   });
+  // Keep equal scores in the catalogue's original order.
   ranked.sort((a, b) => b.score - a.score || a.index - b.index);
   return {
     personalized,

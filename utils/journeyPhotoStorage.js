@@ -35,6 +35,9 @@ export function isSupportedPickerSourceUri(uri) {
   return typeof uri === 'string' && uri.startsWith('file://');
 }
 
+// I wrote this:
+// This keeps Journey photos inside the app's own storage and makes sure
+// the app only deletes photos that it owns.
 export async function copyPersonalJourneyPhoto(asset, journeyId, dependencies = {}) {
   const sourceUri = asset?.uri;
   const filename = createOwnedPhotoFilename(

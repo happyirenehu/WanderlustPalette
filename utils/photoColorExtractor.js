@@ -6,6 +6,8 @@ const MIN_ALPHA = 32;
 const MIN_DISTANCE_SQUARED = 1024;
 
 function bucketIndex(red, green, blue) {
+  // I wrote this part to reduce thousands of pixel colours into manageable
+  // colour groups before choosing the dominant palette.
   return ((red >> 4) << 8) | ((green >> 4) << 4) | (blue >> 4);
 }
 
@@ -23,6 +25,10 @@ function isDistinct(candidate, selected) {
   return selected.every((color) => squaredDistance(candidate.rgb, color.rgb) >= MIN_DISTANCE_SQUARED);
 }
 
+// I wrote this:
+// This is the main Photo → Colour algorithm.
+// It groups similar pixel colours together, counts the strongest ones,
+// then keeps three dominant colours that are different enough from each other.
 export function extractPhotoColors(rgba, width, height) {
   if (!(rgba instanceof Uint8Array) || !Number.isInteger(width) || !Number.isInteger(height)) {
     return { ok: false, colors: [], error: 'Invalid RGBA input.' };

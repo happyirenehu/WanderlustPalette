@@ -97,6 +97,9 @@ export function recommendDestinationsByColor(colorId, catalogue, colors) {
   return normalizeDestinations(catalogue).filter((destination) => destination.colorIds.includes(id));
 }
 
+// I wrote this:
+// This compares destinations by their vibes and colours, then sorts the
+// strongest related matches in a consistent order.
 export function getRelatedDestinations(destinationId, catalogue, limit = 3) {
   const destinations = normalizeDestinations(catalogue);
   const current = destinations.find((destination) => destination.id === cleanText(destinationId));
