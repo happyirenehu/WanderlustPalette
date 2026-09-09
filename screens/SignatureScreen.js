@@ -31,6 +31,13 @@ const WATERCOLOUR_SHAPES = [
   { bottom: 16, height: 92, left: 10, transform: [{ rotate: '-14deg' }], width: 128 },
   { height: 104, right: 26, top: 72, transform: [{ rotate: '16deg' }], width: 136 },
 ];
+const WATERCOLOUR_REVEAL_OFFSETS = [
+  { translateX: -24, translateY: -24 },
+  { translateX: 24, translateY: -24 },
+  { translateX: 24, translateY: 24 },
+  { translateX: -24, translateY: 24 },
+  { translateX: 24, translateY: -24 },
+];
 
 export default function SignatureScreen({
   colourPassport,
@@ -79,8 +86,7 @@ export default function SignatureScreen({
   const inspiredY = useRef(null);
   const pendingResultsScroll = useRef(false);
   const previousDestinationId = useRef(null);
-  const passportRevealOpacity = useRef(new Animated.Value(0)).current;
-  const passportRevealScale = useRef(new Animated.Value(0.98)).current;
+  const watercolourRevealProgress = useRef(new Animated.Value(0)).current;
   const selectedVibe = getVibeById(selectedVibeId, vibes);
   const selectedColor = colors.find((item) => item.id === selectedColorId) || null;
   const selectedExplorationId = discoveryMode === 'color' ? selectedColorId : selectedVibeId;
@@ -120,27 +126,36 @@ export default function SignatureScreen({
   };
   const passportComposition = getPassportArtworkPalette(colourPassport);
   const renderWatercolourArtwork = (palette) => (
-    <Animated.View
-      accessibilityLabel={t('passport.paletteA11y')}
-      style={[
-        styles.watercolourArtwork,
-        { opacity: passportRevealOpacity, transform: [{ scale: passportRevealScale }] },
-      ]}
-    >
-      {palette.map((hex, index) => (
-        <View
-          accessibilityLabel={t('passport.swatchA11y', { color: hex })}
-          key={`${hex}-${index}`}
-          style={[
-            styles.watercolourWash,
-            WATERCOLOUR_SHAPES[index % WATERCOLOUR_SHAPES.length],
-            { backgroundColor: hex },
-          ]}
-        >
-          <View style={[styles.watercolourBloom, { backgroundColor: hex }]} />
-        </View>
-      ))}
-    </Animated.View>
+    <View accessibilityLabel={t('passport.paletteA11y')} style={styles.watercolourArtwork}>
+      {palette.map((hex, index) => {
+        const offset = WATERCOLOUR_REVEAL_OFFSETS[index] || { translateX: 0, translateY: 0 };
+        const translateX = watercolourRevealProgress.interpolate({ inputRange: [0, 1], outputRange: [offset.translateX, 0] });
+        const translateY = watercolourRevealProgress.interpolate({ inputRange: [0, 1], outputRange: [offset.translateY, 0] });
+        return (
+          <Animated.View
+            key={`${hex}-${index}`}
+            style={[
+              StyleSheet.absoluteFillObject,
+              {
+                opacity: watercolourRevealProgress,
+                transform: [{ translateX }, { translateY }],
+              },
+            ]}
+          >
+            <View
+              accessibilityLabel={t('passport.swatchA11y', { color: hex })}
+              style={[
+                styles.watercolourWash,
+                WATERCOLOUR_SHAPES[index % WATERCOLOUR_SHAPES.length],
+                { backgroundColor: hex },
+              ]}
+            >
+              <View style={[styles.watercolourBloom, { backgroundColor: hex }]} />
+            </View>
+          </Animated.View>
+        );
+      })}
+    </View>
   );
 
   useEffect(() => {
@@ -151,25 +166,16 @@ export default function SignatureScreen({
   }, [mode]);
 
   useEffect(() => {
-    passportRevealOpacity.stopAnimation();
-    passportRevealScale.stopAnimation();
-    passportRevealOpacity.setValue(0);
-    passportRevealScale.setValue(0.98);
+    watercolourRevealProgress.stopAnimation();
+    watercolourRevealProgress.setValue(0);
 
     if (mode !== 'passport') return undefined;
 
-    const reveal = Animated.parallel([
-      Animated.timing(passportRevealOpacity, {
-        duration: 600,
-        toValue: 1,
-        useNativeDriver: true,
-      }),
-      Animated.timing(passportRevealScale, {
-        duration: 600,
-        toValue: 1,
-        useNativeDriver: true,
-      }),
-    ]);
+    const reveal = Animated.timing(watercolourRevealProgress, {
+      duration: 850,
+      toValue: 1,
+      useNativeDriver: true,
+    });
     reveal.start();
     return () => reveal.stop();
   }, [mode]);
