@@ -358,7 +358,37 @@ export default function HomeScreen() {
     setScreen('form');
   };
 
-  const choosePersonalPhoto = async () => {
+  const handlePersonalPhotoResult = async (result) => {
+    const pickerResult = normalizePhotoPickerResult(result);
+    if (pickerResult.status === 'cancelled') return;
+    if (pickerResult.status !== 'selected') {
+      setPhotoFeedback('photo.invalidSelection');
+      return;
+    }
+
+    setPhotoFeedback('');
+    const targetJourneyId = editingId || draftJourneyId || createLocalJourneyId();
+    const durablePhoto = await copyPersonalJourneyPhoto(pickerResult.asset, targetJourneyId);
+    if (!durablePhoto.ok) {
+      setPhotoFeedback('photo.saveFailed');
+      return;
+    }
+
+    const previousStagedPhoto = pendingDurablePhotoRef.current;
+    pendingDurablePhotoRef.current = durablePhoto;
+    setPendingDurablePhoto(durablePhoto);
+    setPhotoPaletteSuggestion([]);
+    setPaletteFeedback('photo.coloursExtracting');
+    setPhotoExtractionRequest({
+      height: pickerResult.asset.height,
+      id: `${Date.now()}-${durablePhoto.imageUri}`,
+      uri: durablePhoto.imageUri,
+      width: pickerResult.asset.width,
+    });
+    if (previousStagedPhoto) await cleanupOwnedJourneyPhoto(previousStagedPhoto);
+  };
+
+  const chooseFromLibrary = async () => {
     setPhotoFeedback('');
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -367,40 +397,42 @@ export default function HomeScreen() {
         return;
       }
 
-      const pickerResult = normalizePhotoPickerResult(await ImagePicker.launchImageLibraryAsync({
+      await handlePersonalPhotoResult(await ImagePicker.launchImageLibraryAsync({
         allowsEditing: false,
         allowsMultipleSelection: false,
         mediaTypes: ['images'],
         quality: 1,
         selectionLimit: 1,
       }));
-      if (pickerResult.status === 'cancelled') return;
-      if (pickerResult.status !== 'selected') {
-        setPhotoFeedback('photo.invalidSelection');
-        return;
-      }
-      const targetJourneyId = editingId || draftJourneyId || createLocalJourneyId();
-      const durablePhoto = await copyPersonalJourneyPhoto(pickerResult.asset, targetJourneyId);
-      if (!durablePhoto.ok) {
-        setPhotoFeedback('photo.saveFailed');
-        return;
-      }
-
-      const previousStagedPhoto = pendingDurablePhotoRef.current;
-      pendingDurablePhotoRef.current = durablePhoto;
-      setPendingDurablePhoto(durablePhoto);
-      setPhotoPaletteSuggestion([]);
-      setPaletteFeedback('photo.coloursExtracting');
-      setPhotoExtractionRequest({
-        height: pickerResult.asset.height,
-        id: `${Date.now()}-${durablePhoto.imageUri}`,
-        uri: durablePhoto.imageUri,
-        width: pickerResult.asset.width,
-      });
-      if (previousStagedPhoto) await cleanupOwnedJourneyPhoto(previousStagedPhoto);
     } catch (error) {
       setPhotoFeedback('photo.unavailableFeedback');
     }
+  };
+
+  const takePersonalPhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setPhotoFeedback('photo.cameraPermissionDenied');
+        return;
+      }
+
+      await handlePersonalPhotoResult(await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        mediaTypes: ['images'],
+        quality: 1,
+      }));
+    } catch (error) {
+      setPhotoFeedback('photo.cameraUnavailable');
+    }
+  };
+
+  const choosePersonalPhoto = () => {
+    Alert.alert(t('photo.sourceTitle'), t('photo.sourcePrompt'), [
+      { text: t('photo.chooseFromLibrary'), onPress: chooseFromLibrary },
+      { text: t('photo.takePhoto'), onPress: takePersonalPhoto },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
   };
 
   const handlePhotoPaletteComplete = (extraction) => {

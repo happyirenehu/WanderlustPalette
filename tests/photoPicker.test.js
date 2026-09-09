@@ -32,6 +32,18 @@ describe('personal photo picker normalization', () => {
     });
   });
 
+  test('normalizes a camera-shaped JPEG result without a file name', () => {
+    expect(normalizePhotoPickerResult({
+      canceled: false,
+      assets: [{ height: 3024, mimeType: 'image/jpeg', type: 'image', uri: 'file:///tmp/camera.jpg', width: 4032 }],
+    })).toEqual({
+      status: 'selected',
+      asset: {
+        fileName: '', height: 3024, mimeType: 'image/jpeg', uri: 'file:///tmp/camera.jpg', width: 4032,
+      },
+    });
+  });
+
   test('rejects a video result', () => {
     expect(normalizePhotoPickerResult({
       canceled: false, assets: [{ type: 'video', uri: 'file:///tmp/video.mov' }],
