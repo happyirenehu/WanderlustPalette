@@ -805,10 +805,10 @@ export default function HomeScreen() {
             <Text style={styles.expenseItemAmount}>{formatAmount(expense.amount)}</Text>
           </View>
           <View style={styles.expenseItemActions}>
-            <Pressable accessibilityLabel={t('expenses.editA11y', { category: expense.category })} accessibilityRole="button" onPress={() => startEditExpense(expense)} style={styles.smallActionButton}>
+            <Pressable accessibilityLabel={t('expenses.editA11y', { category: expense.category })} accessibilityRole="button" hitSlop={{ top: 2, bottom: 2 }} onPress={() => startEditExpense(expense)} style={styles.smallActionButton}>
               <Text style={styles.smallActionText}>{t('common.edit')}</Text>
             </Pressable>
-            <Pressable accessibilityLabel={t('expenses.deleteA11y', { category: expense.category })} accessibilityRole="button" onPress={() => requestDeleteExpense(expense)} style={[styles.smallActionButton, styles.smallDeleteButton]}>
+            <Pressable accessibilityLabel={t('expenses.deleteA11y', { category: expense.category })} accessibilityRole="button" hitSlop={{ top: 2, bottom: 2 }} onPress={() => requestDeleteExpense(expense)} style={[styles.smallActionButton, styles.smallDeleteButton]}>
               <Text style={styles.smallDeleteText}>{t('common.delete')}</Text>
             </Pressable>
           </View>
@@ -869,13 +869,15 @@ export default function HomeScreen() {
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>{t('journeys.emptyTitle')}</Text>
           <Text style={styles.emptyCopy}>{t('journeys.emptyCopy')}</Text>
-          <Pressable onPress={() => openAddForm()} style={styles.primaryButton}>
+          <Pressable accessibilityRole="button" onPress={() => openAddForm()} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>{t('journeys.addJourney')}</Text>
           </Pressable>
         </View>
       ) : journeys.map((journey) => (
         <Pressable
+          accessibilityLabel={`${journey.destination}, ${journey.country}, ${journey.date}`}
           accessibilityHint={t('journeys.openHint')}
+          accessibilityRole="button"
           key={journey.id}
           onPress={() => openDetail(journey)}
           style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
@@ -899,7 +901,7 @@ export default function HomeScreen() {
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>{t('journeys.notFound')}</Text>
           <Text style={styles.emptyCopy}>{t('journeys.notFoundCopy')}</Text>
-          <Pressable onPress={openList} style={styles.primaryButton}>
+          <Pressable accessibilityRole="button" onPress={openList} style={styles.primaryButton}>
             <Text style={styles.primaryButtonText}>{t('journeys.back')}</Text>
           </Pressable>
         </View>
@@ -912,7 +914,7 @@ export default function HomeScreen() {
     const localTextColor = getContrastColor(localAccent);
     return (
       <>
-        <Pressable onPress={openList} style={styles.backButton}>
+        <Pressable accessibilityLabel={t('journeys.back')} accessibilityRole="button" onPress={openList} style={styles.backButton}>
           <Text style={styles.backButtonText}>← {t('journeys.myJourneys')}</Text>
         </Pressable>
         <View style={styles.detailCard}>
@@ -930,10 +932,10 @@ export default function HomeScreen() {
             {renderExpenseManager(selectedJourney)}
             {renderExpenseSummary(selectedJourney)}
             <View style={styles.actionRow}>
-              <Pressable onPress={() => openEditForm(selectedJourney)} style={styles.secondaryButton}>
+              <Pressable accessibilityRole="button" onPress={() => openEditForm(selectedJourney)} style={styles.secondaryButton}>
                 <Text style={styles.secondaryButtonText}>{t('common.edit')}</Text>
               </Pressable>
-              <Pressable onPress={() => requestDelete(selectedJourney)} style={styles.deleteButton}>
+              <Pressable accessibilityRole="button" onPress={() => requestDelete(selectedJourney)} style={styles.deleteButton}>
                 <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
               </Pressable>
             </View>
@@ -960,7 +962,7 @@ export default function HomeScreen() {
 
   const renderForm = () => (
     <>
-      <Pressable onPress={cancelJourneyForm} style={styles.backButton}>
+      <Pressable accessibilityLabel={t('common.cancel')} accessibilityRole="button" onPress={cancelJourneyForm} style={styles.backButton}>
         <Text style={styles.backButtonText}>← {t('common.cancel')}</Text>
       </Pressable>
       <View style={styles.formCard}>
@@ -1017,7 +1019,7 @@ export default function HomeScreen() {
                 <View accessibilityLabel={t('journeys.paletteColourA11y', { color })} key={color} style={[styles.suggestedSwatch, { backgroundColor: color }]} />
               ))}
             </View>
-            <Pressable onPress={acceptPhotoPalette} style={styles.secondaryButtonWide}>
+            <Pressable accessibilityRole="button" onPress={acceptPhotoPalette} style={styles.secondaryButtonWide}>
               <Text style={styles.secondaryButtonText}>{t('photo.useColours')}</Text>
             </Pressable>
           </Animated.View>
@@ -1047,7 +1049,7 @@ export default function HomeScreen() {
           {formErrors.palette ? <Text style={styles.errorText}>{t('photo.invalidPalette')}</Text> : null}
         </View>
         {formErrors.form ? <Text style={styles.errorText}>{localizeMessage(formErrors.form)}</Text> : null}
-        <Pressable onPress={submitForm} style={styles.primaryButtonWide}>
+        <Pressable accessibilityRole="button" onPress={submitForm} style={styles.primaryButtonWide}>
           <Text style={styles.primaryButtonText}>{editingId ? t('journeys.saveChanges') : t('journeys.saveJourney')}</Text>
         </Pressable>
       </View>
@@ -1123,14 +1125,14 @@ export default function HomeScreen() {
       {isTopLevelPresentation && languageError ? (
         <View accessibilityRole="alert" style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{t(languageError)}</Text>
-          <Pressable onPress={clearLanguageError}><Text style={styles.dismissText}>{t('common.dismiss')}</Text></Pressable>
+          <Pressable accessibilityRole="button" hitSlop={{ top: 14, bottom: 14, left: 12, right: 12 }} onPress={clearLanguageError}><Text style={styles.dismissText}>{t('common.dismiss')}</Text></Pressable>
         </View>
       ) : null}
       {isTopLevelPresentation ? renderSectionNavigation('top', handleTopNavigationLayout) : null}
       {!isDestinationDetail && section === 'journeys' && storageError ? (
         <View accessibilityRole="alert" style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{localizeMessage(storageError)}</Text>
-          <Pressable onPress={() => setStorageError('')}>
+          <Pressable accessibilityRole="button" hitSlop={{ top: 14, bottom: 14, left: 12, right: 12 }} onPress={() => setStorageError('')}>
             <Text style={styles.dismissText}>{t('common.dismiss')}</Text>
           </Pressable>
         </View>
@@ -1138,7 +1140,7 @@ export default function HomeScreen() {
       {!isDestinationDetail && section === 'discover' && recentVibeStorageError ? (
         <View accessibilityRole="alert" style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{localizeMessage(recentVibeStorageError)}</Text>
-          <Pressable onPress={() => setRecentVibeStorageError('')}>
+          <Pressable accessibilityRole="button" hitSlop={{ top: 14, bottom: 14, left: 12, right: 12 }} onPress={() => setRecentVibeStorageError('')}>
             <Text style={styles.dismissText}>{t('common.dismiss')}</Text>
           </Pressable>
         </View>
@@ -1146,7 +1148,7 @@ export default function HomeScreen() {
       {!isDestinationDetail && (section === 'discover' || section === 'dreams') && dreamStorageError ? (
         <View accessibilityRole="alert" style={styles.errorBanner}>
           <Text style={styles.errorBannerText}>{localizeMessage(dreamStorageError)}</Text>
-          <Pressable onPress={() => setDreamStorageError('')}>
+          <Pressable accessibilityRole="button" hitSlop={{ top: 14, bottom: 14, left: 12, right: 12 }} onPress={() => setDreamStorageError('')}>
             <Text style={styles.dismissText}>{t('common.dismiss')}</Text>
           </Pressable>
         </View>

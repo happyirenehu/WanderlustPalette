@@ -315,7 +315,7 @@ export default function SignatureScreen({
   };
 
   if (selectedDestinationId) {
-    if (!selectedDestination) return <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t('discovery.destinationUnavailable')}</Text><Pressable onPress={closeDestination} style={styles.darkButton}><Text style={styles.darkButtonText}>{t('common.back')}</Text></Pressable></View>;
+    if (!selectedDestination) return <View style={styles.emptyCard}><Text style={styles.emptyTitle}>{t('discovery.destinationUnavailable')}</Text><Pressable accessibilityRole="button" onPress={closeDestination} style={styles.darkButton}><Text style={styles.darkButtonText}>{t('common.back')}</Text></Pressable></View>;
     const destinationVibes = selectedDestination.vibeIds.map((id) => getVibeById(id, vibes)).filter(Boolean);
     const destinationColors = colors.filter((color) => selectedDestination.colorIds.includes(color.id));
     const related = getRelatedDestinations(selectedDestination.id, destinations);
@@ -361,7 +361,7 @@ export default function SignatureScreen({
               <Pressable accessibilityLabel={t('discovery.saveDreamA11y', { action: saved ? t('common.remove') : t('common.save'), direction: saved ? t('discovery.removeDirection') : t('discovery.addDirection'), name: selectedDestination.name })} accessibilityRole="button" onPress={() => onToggleFavourite(selectedDestination.id)} style={[styles.saveButton, saved && styles.removeButton]}><Text style={[styles.saveButtonText, saved && styles.removeButtonText]}>{saved ? t('discovery.removeFromDream') : t('discovery.saveToDream')}</Text></Pressable>
               <Pressable accessibilityLabel={t('discovery.addJourneyA11y', { name: selectedDestination.name })} accessibilityRole="button" onPress={() => onAddJourney?.(selectedDestination.id)} style={styles.addJourneyButton}><Text style={styles.addJourneyButtonText}>{t('discovery.addToJourney')}</Text></Pressable>
             </View>
-            {selectedDestination.imageCredit ? <Pressable accessibilityRole="link" onPress={() => selectedDestination.imageAttributionUrl && Linking.openURL(selectedDestination.imageAttributionUrl)}><Text style={styles.credit}>{selectedDestination.imageCredit}</Text></Pressable> : null}
+            {selectedDestination.imageCredit ? <Pressable accessibilityRole="link" hitSlop={8} onPress={() => selectedDestination.imageAttributionUrl && Linking.openURL(selectedDestination.imageAttributionUrl)}><Text style={styles.credit}>{selectedDestination.imageCredit}</Text></Pressable> : null}
           </View>
         </View>
         {related.length ? <View style={styles.relatedSection}><Text style={styles.resultsTitle}>{t('discovery.keepExploring')}</Text>{related.map((item) => renderDestinationCard(item, true))}</View> : null}
