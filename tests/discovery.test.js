@@ -17,6 +17,18 @@ const EXPANDED_DESTINATION_IDS = [
   'hoi-an-vietnam',
   'cape-town-south-africa',
   'luang-prabang-laos',
+  'reykjavik-iceland',
+  'petra-jordan',
+  'ubud-indonesia',
+  'cartagena-colombia',
+  'jaipur-india',
+  'banff-canada',
+  'valparaiso-chile',
+  'istanbul-turkiye',
+  'zanzibar-tanzania',
+  'havana-cuba',
+  'namib-naukluft-namibia',
+  'jiuzhaigou-china',
 ];
 
 describe('vibe and destination data safety', () => {
@@ -38,15 +50,16 @@ describe('vibe and destination data safety', () => {
     expect(destinations.every((item) => ['budget', 'moderate', 'premium'].includes(item.budget))).toBe(true);
   });
 
-  test('keeps the original twelve records and adds four complete, unique stable destination records', () => {
-    expect(destinations).toHaveLength(16);
-    expect(new Set(destinations.map((item) => item.id)).size).toBe(16);
-    expect(destinations.slice(0, 12).map((item) => item.id)).toEqual([
+  test('keeps the original records and adds twelve complete, unique stable destination records', () => {
+    expect(destinations).toHaveLength(28);
+    expect(new Set(destinations.map((item) => item.id)).size).toBe(28);
+    expect(destinations.slice(0, 16).map((item) => item.id)).toEqual([
       'santorini-greece', 'milos-greece', 'provence-france', 'lake-bled-slovenia',
       'marrakech-morocco', 'seville-spain', 'tuscany-italy', 'madeira-portugal',
       'azores-portugal', 'lofoten-norway', 'kyoto-japan', 'queenstown-new-zealand',
+      'oaxaca-mexico', 'hoi-an-vietnam', 'cape-town-south-africa', 'luang-prabang-laos',
     ]);
-    expect(destinations.slice(12).map((item) => item.id)).toEqual(EXPANDED_DESTINATION_IDS);
+    expect(destinations.slice(16).map((item) => item.id)).toEqual(EXPANDED_DESTINATION_IDS.slice(4));
 
     const validVibeIds = new Set(vibes.map((item) => item.id));
     const validColorIds = new Set(colors.map((item) => item.id));
@@ -57,20 +70,33 @@ describe('vibe and destination data safety', () => {
       'luang-prabang-laos': { countryCode: 'LA', travelRegion: 'Southeast Asia', budget: 'budget', vibeIds: ['calm', 'dreamy'], colorIds: ['citrus', 'forest-green'] },
     };
 
-    EXPANDED_DESTINATION_IDS.forEach((id) => {
-      const destination = destinations.find((item) => item.id === id);
+    destinations.forEach((destination) => {
+      const { id } = destination;
       expect(destination).toMatchObject({ id, ...expected[id] });
       expect(destination.countryCode).toMatch(/^[A-Z]{2}$/);
       expect(destination.vibeIds.every((vibeId) => validVibeIds.has(vibeId))).toBe(true);
       expect(destination.colorIds.every((colorId) => validColorIds.has(colorId))).toBe(true);
-      expect(destination.palette).toHaveLength(5);
+      expect(destination.palette.length).toBeGreaterThanOrEqual(4);
+      if (EXPANDED_DESTINATION_IDS.includes(id)) expect(destination.palette).toHaveLength(5);
       expect(destination.palette.every((color) => /^#[0-9A-F]{6}$/i.test(color))).toBe(true);
       expect(destination.imageUri).toMatch(/^https:\/\/images\.unsplash\.com\/photo-/);
       expect(destination.imageAlt).toBeTruthy();
       expect(destination.imageCredit).toContain('Unsplash');
-      expect(destination.imageAttributionUrl).toMatch(/^https:\/\/unsplash\.com\/photos\//);
+      expect(destination.imageAttributionUrl).toMatch(/^https:\/\/unsplash\.com/);
     });
     expect(colors.find((color) => color.name === 'Golden').id).toBe('citrus');
+  });
+
+  test('covers every curated vibe, colour family, and budget level with multiple destinations', () => {
+    vibes.forEach((vibe) => {
+      expect(recommendDestinations(vibe.id, destinations, vibes).length).toBeGreaterThanOrEqual(4);
+    });
+    colors.forEach((color) => {
+      expect(recommendDestinationsByColor(color.id, destinations, colors).length).toBeGreaterThanOrEqual(4);
+    });
+    ['budget', 'moderate', 'premium'].forEach((budget) => {
+      expect(destinations.filter((destination) => destination.budget === budget).length).toBeGreaterThanOrEqual(4);
+    });
   });
 
   test('keeps every hero image unique and records the five selected photo sources exactly', () => {
@@ -152,17 +178,19 @@ describe('vibe and destination data safety', () => {
 describe('colour-led and related discovery', () => {
   test('recommends a valid colour in catalogue order and supports multiple colours', () => {
     const ocean = recommendDestinationsByColor('ocean-blue', destinations, colors);
-    expect(ocean.map((item) => item.id)).toEqual(['santorini-greece', 'milos-greece', 'lake-bled-slovenia', 'madeira-portugal', 'azores-portugal', 'lofoten-norway', 'queenstown-new-zealand', 'cape-town-south-africa']);
+    expect(ocean.map((item) => item.id)).toEqual(['santorini-greece', 'milos-greece', 'lake-bled-slovenia', 'madeira-portugal', 'azores-portugal', 'lofoten-norway', 'queenstown-new-zealand', 'cape-town-south-africa', 'reykjavik-iceland', 'banff-canada', 'zanzibar-tanzania', 'jiuzhaigou-china']);
     expect(recommendDestinationsByColor('forest-green', destinations, colors).map((item) => item.id)).toContain('lake-bled-slovenia');
   });
 
   test('expansion destinations participate in deterministic vibe and colour recommendations', () => {
     expect(recommendDestinations('warm', destinations, vibes).map((item) => item.id)).toEqual([
       'marrakech-morocco', 'seville-spain', 'tuscany-italy', 'oaxaca-mexico', 'hoi-an-vietnam',
+      'petra-jordan', 'jaipur-india', 'istanbul-turkiye', 'havana-cuba',
     ]);
     expect(recommendDestinations('energetic', destinations, vibes).map((item) => item.id)).toContain('cape-town-south-africa');
     expect(recommendDestinationsByColor('citrus', destinations, colors).map((item) => item.id)).toEqual([
       'marrakech-morocco', 'seville-spain', 'queenstown-new-zealand', 'oaxaca-mexico', 'hoi-an-vietnam', 'luang-prabang-laos',
+      'petra-jordan', 'jaipur-india', 'valparaiso-chile', 'istanbul-turkiye', 'zanzibar-tanzania',
     ]);
     expect(recommendDestinationsByColor('lavender', destinations, colors).map((item) => item.id)).not.toContain('luang-prabang-laos');
   });
@@ -177,10 +205,10 @@ describe('colour-led and related discovery', () => {
     expect(hoiAn.vibeIds).toEqual(['warm', 'dreamy']);
     expect(hoiAn.colorIds).toEqual(['citrus', 'dusty-rose']);
     expect(hoiAn.colorIds).not.toContain('terracotta');
-    expect(warm).toHaveLength(5);
+    expect(warm).toHaveLength(9);
     expect(warm).not.toEqual(terracotta);
-    expect(terracotta).toEqual(['marrakech-morocco', 'seville-spain', 'tuscany-italy', 'oaxaca-mexico']);
-    expect(golden).toHaveLength(6);
+    expect(terracotta).toEqual(['marrakech-morocco', 'seville-spain', 'tuscany-italy', 'oaxaca-mexico', 'petra-jordan', 'cartagena-colombia', 'jaipur-india', 'havana-cuba', 'namib-naukluft-namibia']);
+    expect(golden).toHaveLength(11);
     expect(golden).toContain('hoi-an-vietnam');
     expect(dustyRose).toContain('hoi-an-vietnam');
   });
@@ -231,6 +259,7 @@ describe('deterministic destination recommendations', () => {
   test('returns the expected destinations for a valid vibe in catalogue order', () => {
     expect(recommendDestinations('calm', destinations, vibes).map((item) => item.id)).toEqual([
       'santorini-greece', 'milos-greece', 'lake-bled-slovenia', 'azores-portugal', 'kyoto-japan', 'luang-prabang-laos',
+      'ubud-indonesia', 'banff-canada', 'zanzibar-tanzania', 'jiuzhaigou-china',
     ]);
   });
 

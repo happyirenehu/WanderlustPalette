@@ -69,8 +69,8 @@ describe('localized catalogue presentation', () => {
 
   test('falls back to the English proper noun when no curated mapping exists', () => {
     expect(formatDestinationName('zh-Hant', 'unknown', 'Reykjavík')).toBe('Reykjavík');
-    expect(formatCountryName('zh-Hant', 'IS', 'Iceland')).toBe('Iceland');
-    expect(formatCapitalName('zh-Hant', 'IS', 'Reykjavík')).toBe('Reykjavík');
+    expect(formatCountryName('zh-Hant', 'PH', 'Philippines')).toBe('Philippines');
+    expect(formatCapitalName('zh-Hant', 'PH', 'Manila')).toBe('Manila');
   });
 
   test('localizes required vibes, colours, budgets, snapshot, regions, and income levels', () => {

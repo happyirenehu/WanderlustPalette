@@ -58,15 +58,15 @@ describe('Journey destination linkage', () => {
     expect(isJourneyIdentityField('country')).toBe(true);
   });
 
-  test('new catalog destinations are valid Dream and Journey stable identities', () => {
-    ['oaxaca-mexico', 'hoi-an-vietnam', 'cape-town-south-africa', 'luang-prabang-laos'].forEach((id) => {
+  test('expanded catalog destinations are valid Dream and Journey stable identities', () => {
+    ['oaxaca-mexico', 'hoi-an-vietnam', 'cape-town-south-africa', 'luang-prabang-laos', 'reykjavik-iceland', 'petra-jordan', 'ubud-indonesia', 'cartagena-colombia', 'jaipur-india', 'banff-canada', 'valparaiso-chile', 'istanbul-turkiye', 'zanzibar-tanzania', 'havana-cuba', 'namib-naukluft-namibia', 'jiuzhaigou-china'].forEach((id) => {
       expect(normalizeJourneyDestinationId(id)).toBe(id);
       expect(getDestinationJourneyPrefill(id)?.destinationId).toBe(id);
     });
     expect(deriveDreamMemoryDestinationIds(
-      ['oaxaca-mexico'],
-      [{ ...JOURNEY, destinationId: 'oaxaca-mexico' }],
-    )).toEqual(['oaxaca-mexico']);
+      ['ubud-indonesia'],
+      [{ ...JOURNEY, destinationId: 'ubud-indonesia' }],
+    )).toEqual(['ubud-indonesia']);
   });
 });
 
