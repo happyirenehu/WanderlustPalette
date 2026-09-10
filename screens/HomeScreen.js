@@ -18,7 +18,6 @@ import mockData from '../assets/mockData.json';
 import SignatureScreen from './SignatureScreen.js';
 import PhotoPaletteExtractor from '../components/PhotoPaletteExtractor.js';
 import { useLanguage } from '../context/LanguageContext.js';
-import getContrastColor from '../utils/accessibility.js';
 import { addFavouriteId, isFavouriteId, removeFavouriteId } from '../utils/dreamPalette.js';
 import { loadFavouriteIds, saveFavouriteIds } from '../utils/dreamPaletteStorage.js';
 import { addJourney, createLocalJourneyId, deleteJourney, normalizeJourneys, updateJourney } from '../utils/journeys.js';
@@ -47,6 +46,7 @@ import {
   validateJourneyPalette,
 } from '../utils/journeyPaletteSuggestion.js';
 import getHybridNavigationVisibility from '../utils/hybridNavigation.js';
+import getJourneyPaletteTheme from '../utils/journeyPaletteTheme.js';
 
 const APP_BACKGROUND = '#F4F0E8';
 const EDITORIAL_SERIF = Platform.select({ ios: 'Georgia', default: 'serif' });
@@ -156,6 +156,10 @@ export default function HomeScreen() {
   }, []);
 
   const selectedJourney = journeys.find((journey) => journey.id === selectedId) || null;
+  const journeyPaletteTheme = useMemo(
+    () => getJourneyPaletteTheme(selectedJourney?.palette),
+    [selectedJourney?.palette],
+  );
   const memoryDestinationIds = useMemo(
     () => deriveDreamMemoryDestinationIds(favouriteIds, journeys),
     [favouriteIds, journeys],
@@ -175,6 +179,10 @@ export default function HomeScreen() {
   }), [personalizationJourneys, preferenceProfile]);
   const isTopLevelPresentation = !isDestinationDetail
     && (section !== 'journeys' || screen === 'list');
+  const isJourneyDetailPresentation = section === 'journeys' && screen === 'detail';
+  const presentationBackground = isJourneyDetailPresentation
+    ? journeyPaletteTheme.backgroundColor
+    : APP_BACKGROUND;
   const scrollToDiscoveryResults = useCallback((y) => {
     scrollViewRef.current?.scrollTo({ animated: true, y: Math.max(0, y - 8) });
   }, []);
@@ -908,16 +916,14 @@ export default function HomeScreen() {
       );
     }
 
-    const localAccent = /^#[0-9A-F]{6}$/i.test(selectedJourney.palette[0] || '')
-      ? selectedJourney.palette[0]
-      : '#E8EEF2';
-    const localTextColor = getContrastColor(localAccent);
+    const localAccent = journeyPaletteTheme.primaryColor;
+    const localTextColor = journeyPaletteTheme.primaryForegroundColor;
     return (
       <>
         <Pressable accessibilityLabel={t('journeys.back')} accessibilityRole="button" onPress={openList} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← {t('journeys.myJourneys')}</Text>
+          <Text style={[styles.backButtonText, { color: journeyPaletteTheme.foregroundColor }]}>← {t('journeys.myJourneys')}</Text>
         </Pressable>
-        <View style={styles.detailCard}>
+        <View style={[styles.detailCard, { borderColor: journeyPaletteTheme.borderColor }]}>
           {renderJourneyCover(selectedJourney, styles.detailImage)}
           <View style={[styles.detailAtmosphere, { backgroundColor: localAccent }]}>
             <Text style={[styles.detailDate, { color: localTextColor }]}>{selectedJourney.date}</Text>
@@ -1091,16 +1097,16 @@ export default function HomeScreen() {
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: APP_BACKGROUND }]}>
-      <SafeAreaView edges={isDestinationDetail ? ['right', 'bottom', 'left'] : ['top', 'right', 'bottom', 'left']} style={[styles.safeArea, { backgroundColor: APP_BACKGROUND }]}>
+    <View style={[styles.root, { backgroundColor: presentationBackground }]}>
+      <SafeAreaView edges={isDestinationDetail ? ['right', 'bottom', 'left'] : ['top', 'right', 'bottom', 'left']} style={[styles.safeArea, { backgroundColor: presentationBackground }]}>
       <ScrollView
       contentInsetAdjustmentBehavior="never"
-      contentContainerStyle={[styles.content, { backgroundColor: APP_BACKGROUND }]}
+      contentContainerStyle={[styles.content, { backgroundColor: presentationBackground }]}
       keyboardShouldPersistTaps="handled"
       onScroll={handleAppScroll}
       ref={scrollViewRef}
       scrollEventThrottle={16}
-      style={[styles.screen, { backgroundColor: APP_BACKGROUND }]}
+      style={[styles.screen, { backgroundColor: presentationBackground }]}
     >
       {isTopLevelPresentation ? <View accessibilityLabel={t('language.controlLabel')} accessibilityRole="tablist" style={styles.languageControl}>
         {[
@@ -1242,7 +1248,7 @@ const styles = StyleSheet.create({
   emptyCopy: { color: '#667085', fontSize: 15, lineHeight: 22, marginBottom: 20, marginTop: 8, textAlign: 'center' },
   backButton: { alignSelf: 'flex-start', marginBottom: 12, minHeight: 44, paddingVertical: 12 },
   backButtonText: { color: '#1C2426', fontSize: 16, fontWeight: '700' },
-  detailCard: { backgroundColor: '#FFFCF7', borderRadius: 18, overflow: 'hidden' },
+  detailCard: { backgroundColor: '#FFFCF7', borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
   detailImage: { aspectRatio: 1.05, backgroundColor: '#CBD5E0', width: '100%' },
   detailAtmosphere: { paddingBottom: 25, paddingHorizontal: 22, paddingTop: 22 },
   detailDate: { fontSize: 14, fontWeight: '700', letterSpacing: 1.3, opacity: 0.82, textTransform: 'uppercase' },
