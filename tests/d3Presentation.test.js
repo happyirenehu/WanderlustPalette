@@ -14,8 +14,11 @@ describe('D3 presentation boundaries', () => {
     expect(signatureSource).not.toContain('onSelectTheme');
     expect(homeSource).toContain('getJourneyPaletteTheme(selectedJourney?.palette)');
     expect(homeSource).toContain("const isJourneyDetailPresentation = section === 'journeys' && screen === 'detail'");
-    expect(homeSource).toContain('? journeyPaletteTheme.backgroundColor');
-    expect(homeSource).toContain(': APP_BACKGROUND');
+    expect(homeSource).toContain('new Animated.Value(0)');
+    expect(homeSource).toContain('Animated.timing(journeyAtmosphereOpacity');
+    expect(homeSource).toContain('duration: 550');
+    expect(homeSource).toContain('useNativeDriver: true');
+    expect(homeSource).toContain('styles.journeyAtmosphereLayer');
     expect(homeSource).toContain('backgroundColor: localAccent');
   });
 
@@ -92,7 +95,7 @@ describe('D3 presentation boundaries', () => {
   });
 
   test('Discover keeps one stable content width and all six source vibes across detail transitions', () => {
-    expect(homeSource).toContain('contentContainerStyle={[styles.content, { backgroundColor: presentationBackground }]}');
+    expect(homeSource).toContain('contentContainerStyle={styles.content}');
     expect(homeSource).not.toContain('destinationDetailContent');
     expect(signatureSource).toContain("detailCard: { backgroundColor: '#FFFCF7', marginHorizontal: -20, marginTop: -18");
     expect(signatureSource).toContain('vibes.map((vibe) => <VibeCard');
