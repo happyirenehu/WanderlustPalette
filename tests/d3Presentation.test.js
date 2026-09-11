@@ -15,10 +15,14 @@ describe('D3 presentation boundaries', () => {
     expect(homeSource).toContain('getJourneyPaletteTheme(selectedJourney?.palette)');
     expect(homeSource).toContain("const isJourneyDetailPresentation = section === 'journeys' && screen === 'detail'");
     expect(homeSource).toContain('new Animated.Value(0)');
-    expect(homeSource).toContain('Animated.timing(journeyAtmosphereOpacity');
-    expect(homeSource).toContain('duration: 550');
-    expect(homeSource).toContain('useNativeDriver: true');
-    expect(homeSource).toContain('styles.journeyAtmosphereLayer');
+    expect(homeSource).toContain('styles.journeyWatercolourLayer');
+    expect(homeSource).toContain('styles.journeyWatercolourPrimary');
+    expect(homeSource).toContain('styles.journeyWatercolourSecondary');
+    expect(homeSource).toContain('styles.journeyWatercolourTertiary');
+    expect(homeSource).toContain('journeyPaletteTheme.primaryColor');
+    expect(homeSource).toContain('journeyPaletteTheme.secondaryColor');
+    expect(homeSource).toContain('journeyPaletteTheme.tertiaryColor');
+    expect(homeSource).not.toContain('journeyAtmosphereOpacity');
     expect(homeSource).toContain('backgroundColor: localAccent');
   });
 

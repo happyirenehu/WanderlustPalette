@@ -9,6 +9,7 @@ describe('Journey palette atmosphere', () => {
       primaryColor: '#DCEEFF',
       primaryForegroundColor: '#000000',
       secondaryColor: '#E6B86A',
+      tertiaryColor: '#E6B86A',
     });
   });
 
@@ -42,6 +43,11 @@ describe('Journey palette atmosphere', () => {
     expect(getJourneyPaletteTheme(['#112233', '#112233', 'bad', '#AABBCC']).secondaryColor)
       .toBe('#AABBCC');
     expect(getJourneyPaletteTheme(['#112233']).secondaryColor).toBe('#B8C4C1');
+  });
+
+  test('selects a distinct valid tertiary colour safely', () => {
+    expect(getJourneyPaletteTheme(['#112233', '#112233', 'bad', '#AABBCC', '#DDEEFF']).tertiaryColor)
+      .toBe('#DDEEFF');
   });
 
   test('returns deterministic foreground contrast', () => {

@@ -37,6 +37,9 @@ export default function getJourneyPaletteTheme(palette) {
   const primaryColor = validPalette[0] || FALLBACK_PRIMARY;
   const secondaryColor = validPalette.find((color, index) => index > 0 && color !== primaryColor)
     || FALLBACK_SECONDARY;
+  const tertiaryColor = validPalette.find((color, index) => (
+    index > 1 && color !== primaryColor && color !== secondaryColor
+  )) || secondaryColor;
   const primaryForegroundColor = getContrastColor(primaryColor);
   const darkAtmosphere = primaryForegroundColor === '#FFFFFF';
   const backgroundColor = blendHex(
@@ -52,5 +55,6 @@ export default function getJourneyPaletteTheme(palette) {
     primaryColor,
     primaryForegroundColor,
     secondaryColor,
+    tertiaryColor,
   };
 }

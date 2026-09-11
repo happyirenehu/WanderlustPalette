@@ -93,7 +93,6 @@ export default function HomeScreen() {
   const [photoPaletteSuggestion, setPhotoPaletteSuggestion] = useState([]);
   const paletteRevealOpacity = useRef(new Animated.Value(0)).current;
   const paletteRevealTranslateY = useRef(new Animated.Value(8)).current;
-  const journeyAtmosphereOpacity = useRef(new Animated.Value(0)).current;
   const [paletteFeedback, setPaletteFeedback] = useState('');
   const [paletteHasManualEdits, setPaletteHasManualEdits] = useState(false);
   const paletteHasManualEditsRef = useRef(false);
@@ -181,36 +180,6 @@ export default function HomeScreen() {
   const isTopLevelPresentation = !isDestinationDetail
     && (section !== 'journeys' || screen === 'list');
   const isJourneyDetailPresentation = section === 'journeys' && screen === 'detail';
-  const neutralJourneyForegroundOpacity = journeyAtmosphereOpacity.interpolate({
-    inputRange: [0, 0.6, 0.78, 1],
-    outputRange: [1, 1, 0, 0],
-  });
-  const paletteJourneyForegroundOpacity = journeyAtmosphereOpacity.interpolate({
-    inputRange: [0, 0.6, 0.78, 1],
-    outputRange: [0, 0, 1, 1],
-  });
-
-  const resetJourneyAtmosphere = () => {
-    journeyAtmosphereOpacity.stopAnimation();
-    journeyAtmosphereOpacity.setValue(0);
-  };
-
-  useEffect(() => {
-    journeyAtmosphereOpacity.stopAnimation();
-    if (!isJourneyDetailPresentation || !selectedJourney) {
-      journeyAtmosphereOpacity.setValue(0);
-      return undefined;
-    }
-
-    journeyAtmosphereOpacity.setValue(0);
-    const animation = Animated.timing(journeyAtmosphereOpacity, {
-      duration: 550,
-      toValue: 1,
-      useNativeDriver: true,
-    });
-    animation.start();
-    return () => animation.stop();
-  }, [isJourneyDetailPresentation, journeyAtmosphereOpacity, journeyPaletteTheme.backgroundColor, selectedJourney?.id]);
   const scrollToDiscoveryResults = useCallback((y) => {
     scrollViewRef.current?.scrollTo({ animated: true, y: Math.max(0, y - 8) });
   }, []);
@@ -332,7 +301,6 @@ export default function HomeScreen() {
   const openDetail = (journey) => {
     if (screen === 'list') journeyReturnYRef.current = currentScrollYRef.current;
     pendingNavigationScrollYRef.current = 0;
-    resetJourneyAtmosphere();
     setSelectedId(journey.id);
     setExpenseForm(null);
     setExpenseErrors({});
@@ -563,7 +531,6 @@ export default function HomeScreen() {
     if (stagedPhoto) await cleanupOwnedJourneyPhoto(stagedPhoto);
     if (editingId && selectedJourney) {
       pendingNavigationScrollYRef.current = 0;
-      resetJourneyAtmosphere();
       setScreen('detail');
     }
     else openList();
@@ -636,7 +603,6 @@ export default function HomeScreen() {
     setPhotoFeedback('');
     setFormDestinationId('');
     pendingNavigationScrollYRef.current = 0;
-    resetJourneyAtmosphere();
     setScreen('detail');
   };
 
@@ -952,8 +918,7 @@ export default function HomeScreen() {
     return (
       <>
         <Pressable accessibilityLabel={t('journeys.back')} accessibilityRole="button" onPress={openList} style={styles.backButton}>
-          <Animated.Text accessible={false} style={[styles.backButtonText, { opacity: neutralJourneyForegroundOpacity }]}>← {t('journeys.myJourneys')}</Animated.Text>
-          <Animated.Text accessible={false} style={[styles.backButtonText, styles.backButtonTextOverlay, { color: journeyPaletteTheme.foregroundColor, opacity: paletteJourneyForegroundOpacity }]}>← {t('journeys.myJourneys')}</Animated.Text>
+          <Text style={styles.backButtonText}>← {t('journeys.myJourneys')}</Text>
         </Pressable>
         <View style={[styles.detailCard, { borderColor: journeyPaletteTheme.borderColor }]}>
           {renderJourneyCover(selectedJourney, styles.detailImage)}
@@ -1131,13 +1096,17 @@ export default function HomeScreen() {
   return (
     <View style={[styles.root, { backgroundColor: APP_BACKGROUND }]}>
       {isJourneyDetailPresentation ? (
-        <Animated.View
+        <View
           accessible={false}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
           pointerEvents="none"
-          style={[styles.journeyAtmosphereLayer, { backgroundColor: journeyPaletteTheme.backgroundColor, opacity: journeyAtmosphereOpacity }]}
-        />
+          style={styles.journeyWatercolourLayer}
+        >
+          <View style={[styles.journeyWatercolourWash, styles.journeyWatercolourPrimary, { backgroundColor: journeyPaletteTheme.primaryColor }]} />
+          <View style={[styles.journeyWatercolourWash, styles.journeyWatercolourSecondary, { backgroundColor: journeyPaletteTheme.secondaryColor }]} />
+          <View style={[styles.journeyWatercolourWash, styles.journeyWatercolourTertiary, { backgroundColor: journeyPaletteTheme.tertiaryColor }]} />
+        </View>
       ) : null}
       <SafeAreaView edges={isDestinationDetail ? ['right', 'bottom', 'left'] : ['top', 'right', 'bottom', 'left']} style={styles.safeArea}>
       <ScrollView
@@ -1242,7 +1211,11 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  journeyAtmosphereLayer: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
+  journeyWatercolourLayer: { bottom: 0, left: 0, overflow: 'hidden', position: 'absolute', right: 0, top: 0 },
+  journeyWatercolourWash: { position: 'absolute' },
+  journeyWatercolourPrimary: { borderRadius: 280, height: 420, opacity: 0.12, right: -150, top: -150, width: 520 },
+  journeyWatercolourSecondary: { borderRadius: 240, bottom: 90, height: 300, left: -230, opacity: 0.09, width: 480 },
+  journeyWatercolourTertiary: { borderRadius: 190, height: 240, opacity: 0.055, right: -145, top: 430, width: 330 },
   safeArea: { flex: 1 },
   screen: { flex: 1 },
   content: { flexGrow: 1, paddingBottom: 42, paddingHorizontal: 20, paddingTop: 18 },
@@ -1288,9 +1261,8 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', backgroundColor: '#FFFCF7', borderRadius: 16, padding: 32 },
   emptyTitle: { color: '#1C2426', fontSize: 24, fontWeight: '700', textAlign: 'center' },
   emptyCopy: { color: '#667085', fontSize: 15, lineHeight: 22, marginBottom: 20, marginTop: 8, textAlign: 'center' },
-  backButton: { alignSelf: 'flex-start', marginBottom: 12, minHeight: 44, paddingVertical: 12, position: 'relative' },
+  backButton: { alignSelf: 'flex-start', marginBottom: 12, minHeight: 44, paddingVertical: 12 },
   backButtonText: { color: '#1C2426', fontSize: 16, fontWeight: '700' },
-  backButtonTextOverlay: { left: 0, position: 'absolute', top: 12 },
   detailCard: { backgroundColor: '#FFFCF7', borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
   detailImage: { aspectRatio: 1.05, backgroundColor: '#CBD5E0', width: '100%' },
   detailAtmosphere: { paddingBottom: 25, paddingHorizontal: 22, paddingTop: 22 },
