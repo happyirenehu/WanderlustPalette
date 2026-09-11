@@ -20,7 +20,15 @@ describe('D3 presentation boundaries', () => {
     expect(homeSource).toContain('locations={[0, 0.28, 0.52, 0.74, 1]}');
     expect(homeSource).toContain('styles.journeyWatercolourGradient');
     expect(homeSource).not.toContain('journeyWatercolourWash');
-    expect(homeSource).toContain('backgroundColor: localAccent');
+    expect(homeSource).not.toContain('styles.detailCard');
+    expect(homeSource).not.toContain('detailJournalHeader');
+    expect(homeSource).not.toContain('detailNotesSurface');
+    expect(homeSource).not.toContain('detailPaletteSurface');
+    expect(homeSource).not.toContain('detailExpenseSurface');
+    expect(homeSource).not.toContain('backgroundColor: localAccent');
+    expect(homeSource).toContain('getJourneyPaletteTheme(journey.palette).swatchColors');
+    expect(homeSource).toContain('styles.detailSwatch');
+    expect(homeSource).toContain('borderRadius: 28');
   });
 
   test('Journey cards preserve an image-first cover presentation with a palette fallback', () => {

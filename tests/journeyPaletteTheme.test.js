@@ -10,6 +10,7 @@ describe('Journey palette atmosphere', () => {
       primaryColor: '#DCEEFF',
       primaryForegroundColor: '#000000',
       secondaryColor: '#E6B86A',
+      swatchColors: ['#DCEEFF', '#E6B86A', '#E6B86A'],
       tertiaryColor: '#E6B86A',
     });
   });
@@ -49,6 +50,14 @@ describe('Journey palette atmosphere', () => {
   test('selects a distinct valid tertiary colour safely', () => {
     expect(getJourneyPaletteTheme(['#112233', '#112233', 'bad', '#AABBCC', '#DDEEFF']).tertiaryColor)
       .toBe('#DDEEFF');
+  });
+
+  test('returns exactly three stable swatch colours without mutating saved palette data', () => {
+    const palette = [' #DCEEFF ', 'invalid', '#E6B86A', '#112233'];
+    const original = [...palette];
+
+    expect(getJourneyPaletteTheme(palette).swatchColors).toEqual(['#DCEEFF', '#E6B86A', '#112233']);
+    expect(palette).toEqual(original);
   });
 
   test('returns deterministic foreground contrast', () => {

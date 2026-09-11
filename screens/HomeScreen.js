@@ -733,15 +733,17 @@ export default function HomeScreen() {
   };
 
   const renderPalette = (journey, compact = false) => {
-    if (journey.palette.length === 0) return null;
+    const paletteColors = compact
+      ? journey.palette.slice(0, 5)
+      : getJourneyPaletteTheme(journey.palette).swatchColors;
 
     return (
-      <View accessibilityLabel={t('photo.paletteField')} style={[styles.paletteRow, compact && styles.cardPaletteRow]}>
-        {journey.palette.slice(0, 5).map((color) => (
+      <View accessibilityLabel={t('photo.paletteField')} style={[styles.paletteRow, compact ? styles.cardPaletteRow : styles.detailPaletteRow]}>
+        {paletteColors.map((color, index) => (
           <View
             accessibilityLabel={t('journeys.paletteColourA11y', { color })}
-            key={color}
-            style={[styles.swatch, compact && styles.cardSwatch, { backgroundColor: color }]}
+            key={`${color}-${index}`}
+            style={[styles.swatch, compact ? styles.cardSwatch : styles.detailSwatch, { backgroundColor: color }]}
           />
         ))}
       </View>
@@ -799,8 +801,8 @@ export default function HomeScreen() {
           <Text style={styles.expenseManagerSubtitle}>{t('expenses.listHelp')}</Text>
         </View>
         {!expenseForm ? (
-          <Pressable accessibilityRole="button" onPress={startAddExpense} style={styles.compactButton}>
-            <Text style={styles.compactButtonText}>{t('expenses.add')}</Text>
+          <Pressable accessibilityLabel={t('expenses.add')} accessibilityRole="button" onPress={startAddExpense} style={styles.compactButton}>
+            <Text style={styles.compactButtonText}>＋ {t('expenses.add')}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -914,36 +916,32 @@ export default function HomeScreen() {
       );
     }
 
-    const localAccent = journeyPaletteTheme.primaryColor;
-    const localTextColor = journeyPaletteTheme.primaryForegroundColor;
     return (
       <>
-        <Pressable accessibilityLabel={t('journeys.back')} accessibilityRole="button" onPress={openList} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← {t('journeys.myJourneys')}</Text>
-        </Pressable>
-        <View style={[styles.detailCard, { borderColor: journeyPaletteTheme.borderColor }]}>
-          {renderJourneyCover(selectedJourney, styles.detailImage)}
-          <View style={[styles.detailAtmosphere, { backgroundColor: localAccent }]}>
-            <Text style={[styles.detailDate, { color: localTextColor }]}>{selectedJourney.date}</Text>
-            <Text style={[styles.detailTitle, { color: localTextColor }]}>{selectedJourney.destination}</Text>
-            <Text style={[styles.detailCountry, { color: localTextColor }]}>{selectedJourney.country}</Text>
+        <View style={styles.detailControlRow}>
+          <Pressable accessibilityLabel={t('journeys.back')} accessibilityRole="button" onPress={openList} style={styles.detailBackButton}>
+            <Text style={styles.backButtonText}>← {t('journeys.myJourneys')}</Text>
+          </Pressable>
+          <View style={styles.detailActionGroup}>
+            <Pressable accessibilityRole="button" onPress={() => openEditForm(selectedJourney)} style={styles.detailEditButton}>
+              <Text style={styles.secondaryButtonText}>{t('common.edit')}</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={() => requestDelete(selectedJourney)} style={styles.detailDeleteButton}>
+              <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
+            </Pressable>
           </View>
-          <View style={styles.detailContent}>
-            <Text style={styles.memoryLabel}>{t('journeys.notes')}</Text>
-            <Text style={styles.detailNotes}>{selectedJourney.notes || t('journeys.noNotes')}</Text>
-            <Text style={styles.memoryLabel}>{t('photo.paletteField')}</Text>
-            {renderPalette(selectedJourney)}
-            {renderExpenseManager(selectedJourney)}
-            {renderExpenseSummary(selectedJourney)}
-            <View style={styles.actionRow}>
-              <Pressable accessibilityRole="button" onPress={() => openEditForm(selectedJourney)} style={styles.secondaryButton}>
-                <Text style={styles.secondaryButtonText}>{t('common.edit')}</Text>
-              </Pressable>
-              <Pressable accessibilityRole="button" onPress={() => requestDelete(selectedJourney)} style={styles.deleteButton}>
-                <Text style={styles.deleteButtonText}>{t('common.delete')}</Text>
-              </Pressable>
-            </View>
-          </View>
+        </View>
+        <Text style={styles.detailDate}>{selectedJourney.date}</Text>
+        <Text style={styles.detailTitle}>{selectedJourney.destination}</Text>
+        <Text style={styles.detailCountry}>{selectedJourney.country}</Text>
+        {renderJourneyCover(selectedJourney, styles.detailImage)}
+        <View style={styles.detailContent}>
+          <Text style={[styles.memoryLabel, styles.detailPaletteLabel]}>{t('photo.paletteField')}</Text>
+          {renderPalette(selectedJourney)}
+          <Text style={[styles.memoryLabel, styles.detailMemoryLabel]}>{t('dream.memory')}</Text>
+          <Text style={styles.detailNotes}>{selectedJourney.notes || t('journeys.noNotes')}</Text>
+          {renderExpenseManager(selectedJourney)}
+          {renderExpenseSummary(selectedJourney)}
         </View>
       </>
     );
@@ -1260,21 +1258,28 @@ const styles = StyleSheet.create({
   emptyCopy: { color: '#667085', fontSize: 15, lineHeight: 22, marginBottom: 20, marginTop: 8, textAlign: 'center' },
   backButton: { alignSelf: 'flex-start', marginBottom: 12, minHeight: 44, paddingVertical: 12 },
   backButtonText: { color: '#1C2426', fontSize: 16, fontWeight: '700' },
-  detailCard: { backgroundColor: '#FFFCF7', borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
-  detailImage: { aspectRatio: 1.05, backgroundColor: '#CBD5E0', width: '100%' },
-  detailAtmosphere: { paddingBottom: 25, paddingHorizontal: 22, paddingTop: 22 },
-  detailDate: { fontSize: 14, fontWeight: '700', letterSpacing: 1.3, opacity: 0.82, textTransform: 'uppercase' },
-  detailTitle: { fontFamily: EDITORIAL_SERIF, fontSize: 39, fontWeight: '700', letterSpacing: -0.8, lineHeight: 44, marginTop: 7 },
-  detailCountry: { fontSize: 18, fontWeight: '500', marginTop: 3, opacity: 0.84 },
-  detailContent: { padding: 22 },
-  memoryLabel: { color: '#817A72', fontSize: 14, fontWeight: '700', letterSpacing: 1.2, marginTop: 6, textTransform: 'uppercase' },
-  detailNotes: { color: '#434C4A', fontSize: 18, fontStyle: 'italic', lineHeight: 28, marginBottom: 28, marginTop: 10 },
-  expenseSummary: { backgroundColor: '#F2F3F0', borderRadius: 12, marginTop: 24, padding: 17 },
-  expenseTitle: { color: '#17202A', fontSize: 18, fontWeight: '900', letterSpacing: 0.6, marginBottom: 12 },
+  detailControlRow: { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+  detailBackButton: { minHeight: 44, paddingVertical: 12 },
+  detailActionGroup: { flexDirection: 'row', gap: 8 },
+  detailEditButton: { alignItems: 'center', minHeight: 40, paddingHorizontal: 12, paddingVertical: 10 },
+  detailDeleteButton: { alignItems: 'center', minHeight: 40, paddingHorizontal: 12, paddingVertical: 10 },
+  detailImage: { aspectRatio: 1.05, backgroundColor: '#CBD5E0', borderRadius: 16, marginTop: 22, width: '100%' },
+  detailDate: { color: '#817A72', fontSize: 14, fontWeight: '700', letterSpacing: 1.3, opacity: 0.9, textTransform: 'uppercase' },
+  detailTitle: { color: '#1C2426', fontFamily: EDITORIAL_SERIF, fontSize: 46, fontWeight: '700', letterSpacing: -1.1, lineHeight: 52, marginTop: 9 },
+  detailCountry: { color: '#555D5B', fontSize: 15, fontWeight: '700', letterSpacing: 1.1, marginTop: 5, textTransform: 'uppercase' },
+  detailContent: { paddingTop: 18 },
+  memoryLabel: { color: '#756F68', fontSize: 12, fontWeight: '800', letterSpacing: 1.8, marginTop: 6, textTransform: 'uppercase' },
+  detailPaletteLabel: { marginTop: 6 },
+  detailPaletteRow: { gap: 14, marginTop: 14 },
+  detailSwatch: { borderColor: 'rgba(80, 76, 70, 0.22)', borderRadius: 28, borderWidth: 1, flex: 0, height: 56, width: 56 },
+  detailMemoryLabel: { marginTop: 38 },
+  detailNotes: { color: '#434C4A', fontSize: 18, fontStyle: 'italic', lineHeight: 31, marginTop: 12 },
+  expenseSummary: { marginTop: 24 },
+  expenseTitle: { color: '#414B49', fontSize: 15, fontWeight: '800', letterSpacing: 0.8, marginBottom: 14, textTransform: 'uppercase' },
   expenseHighlightRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   expenseHighlight: { flex: 1 },
   expenseLabel: { color: '#667085', fontSize: 14, fontWeight: '900', letterSpacing: 0.5, marginTop: 10, textTransform: 'uppercase' },
-  expenseValue: { color: '#17202A', fontSize: 22, fontWeight: '900', marginTop: 3 },
+  expenseValue: { color: '#303A38', fontSize: 22, fontWeight: '800', marginTop: 3 },
   expenseLargest: { color: '#8D4F5B', fontSize: 16, fontWeight: '800', marginTop: 4 },
   expenseRow: { flexDirection: 'row', gap: 12, justifyContent: 'space-between', marginTop: 8 },
   expenseCategory: { color: '#344054', flex: 1, fontSize: 14, fontWeight: '700' },
@@ -1284,14 +1289,14 @@ const styles = StyleSheet.create({
   expenseManager: { borderTopColor: '#D8D0C7', borderTopWidth: 1, marginTop: 30, paddingTop: 22 },
   expenseManagerHeader: { alignItems: 'flex-start', flexDirection: 'row', gap: 12, justifyContent: 'space-between' },
   expenseManagerCopy: { flex: 1 },
-  expenseManagerTitle: { color: '#17202A', fontSize: 18, fontWeight: '900' },
-  expenseManagerSubtitle: { color: '#667085', fontSize: 14, lineHeight: 20, marginTop: 3 },
-  compactButton: { backgroundColor: '#17202A', borderRadius: 7, minHeight: 42, paddingHorizontal: 13, paddingVertical: 11 },
-  compactButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
-  expenseItem: { alignItems: 'center', borderTopColor: '#E4E9EC', borderTopWidth: 1, flexDirection: 'row', gap: 10, justifyContent: 'space-between', marginTop: 14, paddingTop: 14 },
+  expenseManagerTitle: { color: '#414B49', fontSize: 13, fontWeight: '800', letterSpacing: 1.4, textTransform: 'uppercase' },
+  expenseManagerSubtitle: { color: '#667085', fontSize: 14, lineHeight: 21, marginTop: 5 },
+  compactButton: { alignItems: 'center', backgroundColor: 'rgba(255, 252, 247, 0.54)', borderColor: 'rgba(90, 84, 76, 0.28)', borderRadius: 18, borderWidth: 1, minHeight: 42, paddingHorizontal: 13, paddingVertical: 10 },
+  compactButtonText: { color: '#414B49', fontSize: 14, fontWeight: '800' },
+  expenseItem: { alignItems: 'center', backgroundColor: 'rgba(255, 252, 247, 0.58)', borderColor: 'rgba(90, 84, 76, 0.12)', borderRadius: 10, borderWidth: 1, flexDirection: 'row', gap: 10, justifyContent: 'space-between', marginTop: 12, padding: 12 },
   expenseItemCopy: { flex: 1 },
-  expenseItemCategory: { color: '#344054', fontSize: 14, fontWeight: '800' },
-  expenseItemAmount: { color: '#17202A', fontSize: 18, fontWeight: '900', marginTop: 2 },
+  expenseItemCategory: { color: '#4D5654', fontSize: 14, fontWeight: '700' },
+  expenseItemAmount: { color: '#303A38', fontSize: 18, fontWeight: '800', marginTop: 3 },
   expenseItemActions: { flexDirection: 'row', gap: 7 },
   smallActionButton: { alignItems: 'center', backgroundColor: '#E8EEF2', borderRadius: 6, justifyContent: 'center', minHeight: 40, minWidth: 52, paddingHorizontal: 9 },
   smallActionText: { color: '#17202A', fontSize: 14, fontWeight: '800' },
@@ -1302,7 +1307,6 @@ const styles = StyleSheet.create({
   expenseAmountLabel: { marginTop: 14 },
   expenseEditorActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
   primaryButtonFlex: { alignItems: 'center', backgroundColor: '#17202A', borderRadius: 8, flex: 1, padding: 13 },
-  actionRow: { flexDirection: 'row', gap: 12, marginTop: 28 },
   secondaryButton: { alignItems: 'center', backgroundColor: '#E8EEF2', borderRadius: 8, flex: 1, padding: 13 },
   secondaryButtonText: { color: '#17202A', fontSize: 16, fontWeight: '700' },
   deleteButton: { alignItems: 'center', backgroundColor: '#FDECEC', borderRadius: 8, flex: 1, padding: 13 },

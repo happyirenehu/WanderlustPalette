@@ -64,6 +64,11 @@ export default function getJourneyPaletteTheme(palette) {
     primaryColor,
     primaryForegroundColor,
     secondaryColor,
+    swatchColors: [
+      validPalette[0] || primaryColor,
+      validPalette[1] || secondaryColor,
+      validPalette[2] || tertiaryColor,
+    ],
     tertiaryColor,
   };
 }
