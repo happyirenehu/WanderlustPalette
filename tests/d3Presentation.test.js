@@ -28,7 +28,11 @@ describe('D3 presentation boundaries', () => {
     expect(homeSource).not.toContain('backgroundColor: localAccent');
     expect(homeSource).toContain('getJourneyPaletteTheme(journey.palette).swatchColors');
     expect(homeSource).toContain('styles.detailSwatch');
+    expect(homeSource).toContain('styles.cardSwatch');
     expect(homeSource).toContain('borderRadius: 28');
+    expect(homeSource).toContain("cardSwatch: { height: 4 }");
+    expect(homeSource).toContain('cardPaletteRow: { gap: 0, marginTop: 0, overflow: \'hidden\' }');
+    expect(homeSource).not.toContain('slice(0, 5)');
   });
 
   test('Journey cards preserve an image-first cover presentation with a palette fallback', () => {

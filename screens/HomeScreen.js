@@ -733,9 +733,7 @@ export default function HomeScreen() {
   };
 
   const renderPalette = (journey, compact = false) => {
-    const paletteColors = compact
-      ? journey.palette.slice(0, 5)
-      : getJourneyPaletteTheme(journey.palette).swatchColors;
+    const paletteColors = getJourneyPaletteTheme(journey.palette).swatchColors;
 
     return (
       <View accessibilityLabel={t('photo.paletteField')} style={[styles.paletteRow, compact ? styles.cardPaletteRow : styles.detailPaletteRow]}>
@@ -896,8 +894,8 @@ export default function HomeScreen() {
             <Text style={styles.location}>{journey.destination}</Text>
             <Text style={styles.country}>{journey.country}</Text>
             {journey.notes ? <Text numberOfLines={2} style={styles.description}>{journey.notes}</Text> : null}
-            {renderPalette(journey, true)}
           </View>
+          {renderPalette(journey, true)}
         </Pressable>
       ))}
     </>
@@ -1250,9 +1248,9 @@ const styles = StyleSheet.create({
   country: { color: '#77736E', fontSize: 16, fontWeight: '500', marginTop: 2 },
   description: { color: '#555D5B', fontSize: 16, fontStyle: 'italic', lineHeight: 25, marginTop: 11 },
   paletteRow: { flexDirection: 'row', gap: 5, marginTop: 12 },
-  cardPaletteRow: { gap: 0, marginHorizontal: -20, marginBottom: -20, marginTop: 18 },
+  cardPaletteRow: { gap: 0, marginTop: 0, overflow: 'hidden' },
   swatch: { flex: 1, height: 58 },
-  cardSwatch: { height: 12 },
+  cardSwatch: { height: 4 },
   emptyState: { alignItems: 'center', backgroundColor: '#FFFCF7', borderRadius: 16, padding: 32 },
   emptyTitle: { color: '#1C2426', fontSize: 24, fontWeight: '700', textAlign: 'center' },
   emptyCopy: { color: '#667085', fontSize: 15, lineHeight: 22, marginBottom: 20, marginTop: 8, textAlign: 'center' },

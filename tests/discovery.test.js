@@ -79,7 +79,7 @@ describe('vibe and destination data safety', () => {
       expect(destination.palette.length).toBeGreaterThanOrEqual(4);
       if (EXPANDED_DESTINATION_IDS.includes(id)) expect(destination.palette).toHaveLength(5);
       expect(destination.palette.every((color) => /^#[0-9A-F]{6}$/i.test(color))).toBe(true);
-      expect(destination.imageUri).toMatch(/^https:\/\/images\.unsplash\.com\/photo-/);
+      expect(destination.imageUri).toMatch(/^https:\/\/(images|plus)\.unsplash\.com\/(premium_)?photo-/);
       expect(destination.imageAlt).toBeTruthy();
       expect(destination.imageCredit).toContain('Unsplash');
       expect(destination.imageAttributionUrl).toMatch(/^https:\/\/unsplash\.com/);
@@ -99,7 +99,7 @@ describe('vibe and destination data safety', () => {
     });
   });
 
-  test('keeps every hero image unique and records the five selected photo sources exactly', () => {
+  test('keeps every hero image unique and records selected photo sources exactly', () => {
     expect(destinations.every((destination) => destination.imageUri && destination.imageAlt && destination.imageAttributionUrl)).toBe(true);
     expect(new Set(destinations.map((destination) => destination.imageUri)).size).toBe(destinations.length);
 
@@ -133,6 +133,66 @@ describe('vibe and destination data safety', () => {
         imageUri: 'https://images.unsplash.com/photo-1771783572346-9a4d8a4d967b',
         imageCredit: 'Photo by Kevin Charit via Unsplash',
         imageAttributionUrl: 'https://unsplash.com/photos/village-nestled-by-a-wide-river-with-mountains-beyond-QQ_CJiTod30',
+      },
+      'petra-jordan': {
+        imageUri: 'https://images.unsplash.com/photo-1580834341580-8c17a3a630ca',
+        imageCredit: 'Photo by Alex Vasey via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/treasury-in-petra-sandstone-canyon-5_Bu25SV6X8',
+      },
+      'cartagena-colombia': {
+        imageUri: 'https://images.unsplash.com/photo-1534943441045-1009d7cb0bb9',
+        imageCredit: 'Photo by Ricardo Gomez Angel via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/colonial-street-and-church-in-cartagena-GcHar4P8V_Q',
+      },
+      'jaipur-india': {
+        imageUri: 'https://images.unsplash.com/photo-1477587458883-47145ed94245',
+        imageCredit: 'Photo by Aditya Siva via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/men-riding-decorated-horses-past-hawa-mahal-6rDbvXzIVpQ',
+      },
+      'jiuzhaigou-china': {
+        imageUri: 'https://images.unsplash.com/photo-1768276531096-c5290178c3cb',
+        imageCredit: 'Photo by Russ Lee via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/a-clear-blue-lake-surrounded-by-trees-and-mountains-OZCv2DKjb0g',
+      },
+      'ubud-indonesia': {
+        imageUri: 'https://plus.unsplash.com/premium_photo-1669317566483-d3327adeda10?auto=format&fit=crop&q=80&w=1200',
+        imageCredit: 'Photo by Spenser Sembrat via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/a-lush-green-hillside-covered-in-lush-vegetation-JEJbKOUE3d0',
+      },
+      'banff-canada': {
+        imageUri: 'https://images.unsplash.com/photo-1503614472-8c93d56e92ce',
+        imageCredit: 'Photo by John Lee via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/scenery-of-mountain-oMneOBYhJxY',
+      },
+      'zanzibar-tanzania': {
+        imageUri: 'https://images.unsplash.com/photo-1575999502951-4ab25b5ca889',
+        imageCredit: 'Photo by Humphrey M via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/white-sand-beach-in-zanzibar-e6dRLBx6Kg8',
+      },
+      'azores-portugal': {
+        imageUri: 'https://images.unsplash.com/photo-1676065344960-6505bec2bf89',
+        imageCredit: 'Photo by Anna Jewels via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/a-scenic-view-of-a-large-body-of-water-036MjsUYfn8',
+      },
+      'milos-greece': {
+        imageUri: 'https://images.unsplash.com/photo-1565588514814-6a9e7bcd7657',
+        imageCredit: 'Photo by David Tip via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/beach-during-daytime-KeTZcPnlIjE',
+      },
+      'santorini-greece': {
+        imageUri: 'https://images.unsplash.com/photo-1596933144889-c15043a9ddde',
+        imageCredit: 'Photo by Alberto Lora via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/white-and-blue-dome-building-near-body-of-water-during-daytime-xEG9zTZ8kog',
+      },
+      'madeira-portugal': {
+        imageUri: 'https://images.unsplash.com/photo-1645650285114-5e19f550483a',
+        imageCredit: 'Photo by Jarno Colijn via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/a-view-of-the-ocean-from-the-top-of-a-cliff-77KHpqwp30Y',
+      },
+      'valparaiso-chile': {
+        imageUri: 'https://images.unsplash.com/photo-1717674933777-dbf39a9c04af',
+        imageCredit: 'Photo by suansita k via Unsplash',
+        imageAttributionUrl: 'https://unsplash.com/photos/a-view-of-a-city-with-a-large-body-of-water-in-the-background-rjFJecVOnBA',
       },
     };
 
