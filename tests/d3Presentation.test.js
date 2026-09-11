@@ -48,6 +48,26 @@ describe('D3 presentation boundaries', () => {
     expect(signatureSource).not.toContain('matchPercentage');
   });
 
+  test('Discover and Dream card quick actions reuse the existing toggle without nesting destination navigation', () => {
+    const cardSource = signatureSource.slice(
+      signatureSource.indexOf('const renderDestinationCard ='),
+      signatureSource.indexOf('if (selectedDestinationId)'),
+    );
+    const inspiredSource = signatureSource.slice(
+      signatureSource.indexOf('<View onLayout={handleInspiredLayout}'),
+      signatureSource.indexOf('</>\n  );\n}', signatureSource.indexOf('<View onLayout={handleInspiredLayout}')),
+    );
+
+    expect(cardSource).toContain("const showQuickDream = !selectedDestinationId && (mode === 'discover' || mode === 'dreams')");
+    expect(cardSource).toContain('onPress={() => onToggleFavourite(destination.id)}');
+    expect(cardSource).toContain('accessibilityLabel={saved ? `Remove ${destination.name} from Dream Palette` : `Add ${destination.name} to Dream Palette`}');
+    expect(cardSource).toContain("{saved ? '♥' : '♡'}");
+    expect(cardSource.indexOf('</Pressable>\n        {showQuickDream')).toBeGreaterThan(-1);
+    expect(signatureSource).toContain('{dreamDestinations.length ? dreamDestinations.map((item) => renderDestinationCard(item))');
+    expect(inspiredSource).toContain('renderDestinationCard(\n          recommendation.destination,\n          true,');
+    expect(signatureSource).toContain("onPress={() => onToggleFavourite(selectedDestination.id)}");
+  });
+
   test('Passport artwork and narrative remain derived from existing evidence', () => {
     expect(signatureSource).toContain('getPassportNarrative(colourPassport)');
     expect(signatureSource).toContain('getPassportArtworkPalette(colourPassport)');

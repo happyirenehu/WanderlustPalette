@@ -287,30 +287,45 @@ export default function SignatureScreen({
   const renderDestinationCard = (destination, compact = false, personalizationReasons = []) => {
     const saved = isFavouriteId(favouriteIds, destination.id);
     const becameMemory = mode === 'dreams' && isDreamMemoryDestination(memoryDestinationIds, destination.id);
+    const showQuickDream = !selectedDestinationId && (mode === 'discover' || mode === 'dreams');
     return (
-      <Pressable accessibilityHint={t('discovery.destinationHint')} accessibilityLabel={`${destination.name}, ${destination.country}${saved ? `, ${t('discovery.savedToDream')}` : ''}${becameMemory ? `, ${t('dream.becameMemory')}` : ''}`} accessibilityRole="button" key={destination.id} onPress={() => openDestination(destination.id)} style={({ pressed }) => [styles.destinationCard, compact && styles.compactCard, pressed && styles.pressedCard]}>
-        <DestinationImage destination={destination} />
-        <View style={styles.destinationBody}>
-          <View style={styles.destinationHeading}>
-            <View style={styles.destinationCopy}><Text style={styles.eyebrow}>{destination.colorFamily || t('discovery.curatedColorStory')}</Text><Text style={[styles.destinationName, compact && styles.compactName]}>{destination.name}</Text><Text style={styles.destinationCountry}>{destination.country}</Text></View>
-            <View style={styles.badgeColumn}>
-              {saved ? <Text style={styles.savedBadge}>{t('common.saved')}</Text> : null}
-              {becameMemory ? <Text style={styles.memoryBadge}>{t('dream.memory')}</Text> : null}
+      <View key={destination.id} style={[styles.destinationCard, compact && styles.compactCard]}>
+        <Pressable accessibilityHint={t('discovery.destinationHint')} accessibilityLabel={`${destination.name}, ${destination.country}${saved ? `, ${t('discovery.savedToDream')}` : ''}${becameMemory ? `, ${t('dream.becameMemory')}` : ''}`} accessibilityRole="button" onPress={() => openDestination(destination.id)} style={({ pressed }) => pressed && styles.pressedCard}>
+          <DestinationImage destination={destination} />
+          <View style={styles.destinationBody}>
+            <View style={styles.destinationHeading}>
+              <View style={styles.destinationCopy}><Text style={styles.eyebrow}>{destination.colorFamily || t('discovery.curatedColorStory')}</Text><Text style={[styles.destinationName, compact && styles.compactName]}>{destination.name}</Text><Text style={styles.destinationCountry}>{destination.country}</Text></View>
+              <View style={styles.badgeColumn}>
+                {saved ? <Text style={styles.savedBadge}>{t('common.saved')}</Text> : null}
+                {becameMemory ? <Text style={styles.memoryBadge}>{t('dream.memory')}</Text> : null}
+              </View>
             </View>
+            {becameMemory ? <Text style={styles.memoryMessage}>{t('dream.becameMemory')}</Text> : null}
+            {personalizationReasons.length ? (
+              <View accessibilityLabel={t('personalization.whyTitle')} style={styles.reasonList}>
+                <Text style={styles.reasonTitle}>{t('personalization.whyTitle')}</Text>
+                {personalizationReasons.map((reason, index) => {
+                  const text = reasonText(reason);
+                  return text ? <Text key={`${reason.type}-${index}`} style={styles.reasonText}>{text}</Text> : null;
+                })}
+              </View>
+            ) : null}
+            {!compact ? <><Text style={styles.destinationDescription}>{destination.description}</Text>{renderPalette(destination.palette, destination.name)}</> : null}
           </View>
-          {becameMemory ? <Text style={styles.memoryMessage}>{t('dream.becameMemory')}</Text> : null}
-          {personalizationReasons.length ? (
-            <View accessibilityLabel={t('personalization.whyTitle')} style={styles.reasonList}>
-              <Text style={styles.reasonTitle}>{t('personalization.whyTitle')}</Text>
-              {personalizationReasons.map((reason, index) => {
-                const text = reasonText(reason);
-                return text ? <Text key={`${reason.type}-${index}`} style={styles.reasonText}>{text}</Text> : null;
-              })}
-            </View>
-          ) : null}
-          {!compact ? <><Text style={styles.destinationDescription}>{destination.description}</Text>{renderPalette(destination.palette, destination.name)}</> : null}
-        </View>
-      </Pressable>
+        </Pressable>
+        {showQuickDream ? (
+          <Pressable
+            accessibilityLabel={saved ? `Remove ${destination.name} from Dream Palette` : `Add ${destination.name} to Dream Palette`}
+            accessibilityRole="button"
+            accessibilityState={{ selected: saved }}
+            hitSlop={6}
+            onPress={() => onToggleFavourite(destination.id)}
+            style={styles.quickDreamButton}
+          >
+            <Text style={[styles.quickDreamIcon, saved && styles.quickDreamIconSaved]}>{saved ? '♥' : '♡'}</Text>
+          </Pressable>
+        ) : null}
+      </View>
     );
   };
 
@@ -485,6 +500,9 @@ const styles = StyleSheet.create({
   destinationCard: { backgroundColor: '#FFFCF7', borderRadius: 16, elevation: 2, marginBottom: 24, overflow: 'hidden', shadowColor: '#2C2925', shadowOffset: { height: 5, width: 0 }, shadowOpacity: 0.09, shadowRadius: 14 },
   compactCard: { marginBottom: 20 },
   pressedCard: { opacity: 0.9, transform: [{ scale: 0.99 }] },
+  quickDreamButton: { alignItems: 'center', height: 44, justifyContent: 'center', position: 'absolute', right: 10, top: 10, width: 44, zIndex: 2 },
+  quickDreamIcon: { color: '#FFFCF7', fontSize: 28, textShadowColor: 'rgba(28, 36, 38, 0.45)', textShadowOffset: { height: 1, width: 0 }, textShadowRadius: 3 },
+  quickDreamIconSaved: { color: '#B75D68' },
   destinationBody: { padding: 20 },
   destinationHeading: { alignItems: 'flex-start', flexDirection: 'row', gap: 10, justifyContent: 'space-between' },
   destinationCopy: { flex: 1 },
