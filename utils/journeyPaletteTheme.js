@@ -6,6 +6,7 @@ const FALLBACK_SECONDARY = '#B8C4C1';
 const LIGHT_ATMOSPHERE = '#F7F2E8';
 const DARK_ATMOSPHERE = '#151C1C';
 const CARD_SURFACE = '#FFFCF7';
+const WARM_PAPER = '#F4F0E8';
 
 function normalizeHex(value) {
   return typeof value === 'string' && HEX_COLOR.test(value.trim())
@@ -42,6 +43,7 @@ export default function getJourneyPaletteTheme(palette) {
   )) || secondaryColor;
   const primaryForegroundColor = getContrastColor(primaryColor);
   const darkAtmosphere = primaryForegroundColor === '#FFFFFF';
+  const mixedPaletteColor = blendHex(primaryColor, secondaryColor, 0.56);
   const backgroundColor = blendHex(
     primaryColor,
     darkAtmosphere ? DARK_ATMOSPHERE : LIGHT_ATMOSPHERE,
@@ -52,6 +54,13 @@ export default function getJourneyPaletteTheme(palette) {
     backgroundColor,
     borderColor: blendHex(secondaryColor, CARD_SURFACE, 0.28),
     foregroundColor: getContrastColor(backgroundColor),
+    gradientColors: [
+      WARM_PAPER,
+      blendHex(primaryColor, WARM_PAPER, 0.08),
+      blendHex(secondaryColor, WARM_PAPER, 0.2),
+      blendHex(mixedPaletteColor, WARM_PAPER, 0.36),
+      blendHex(primaryColor, WARM_PAPER, 0.56),
+    ],
     primaryColor,
     primaryForegroundColor,
     secondaryColor,

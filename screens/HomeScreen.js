@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
@@ -1096,17 +1097,17 @@ export default function HomeScreen() {
   return (
     <View style={[styles.root, { backgroundColor: APP_BACKGROUND }]}>
       {isJourneyDetailPresentation ? (
-        <View
+        <LinearGradient
           accessible={false}
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
           pointerEvents="none"
-          style={styles.journeyWatercolourLayer}
-        >
-          <View style={[styles.journeyWatercolourWash, styles.journeyWatercolourPrimary, { backgroundColor: journeyPaletteTheme.primaryColor }]} />
-          <View style={[styles.journeyWatercolourWash, styles.journeyWatercolourSecondary, { backgroundColor: journeyPaletteTheme.secondaryColor }]} />
-          <View style={[styles.journeyWatercolourWash, styles.journeyWatercolourTertiary, { backgroundColor: journeyPaletteTheme.tertiaryColor }]} />
-        </View>
+          colors={journeyPaletteTheme.gradientColors}
+          locations={[0, 0.28, 0.52, 0.74, 1]}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={styles.journeyWatercolourGradient}
+        />
       ) : null}
       <SafeAreaView edges={isDestinationDetail ? ['right', 'bottom', 'left'] : ['top', 'right', 'bottom', 'left']} style={styles.safeArea}>
       <ScrollView
@@ -1211,11 +1212,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  journeyWatercolourLayer: { bottom: 0, left: 0, overflow: 'hidden', position: 'absolute', right: 0, top: 0 },
-  journeyWatercolourWash: { position: 'absolute' },
-  journeyWatercolourPrimary: { borderRadius: 280, height: 420, opacity: 0.12, right: -150, top: -150, width: 520 },
-  journeyWatercolourSecondary: { borderRadius: 240, bottom: 90, height: 300, left: -230, opacity: 0.09, width: 480 },
-  journeyWatercolourTertiary: { borderRadius: 190, height: 240, opacity: 0.055, right: -145, top: 430, width: 330 },
+  journeyWatercolourGradient: { bottom: 0, left: 0, position: 'absolute', right: 0, top: 0 },
   safeArea: { flex: 1 },
   screen: { flex: 1 },
   content: { flexGrow: 1, paddingBottom: 42, paddingHorizontal: 20, paddingTop: 18 },

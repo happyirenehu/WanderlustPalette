@@ -15,14 +15,11 @@ describe('D3 presentation boundaries', () => {
     expect(homeSource).toContain('getJourneyPaletteTheme(selectedJourney?.palette)');
     expect(homeSource).toContain("const isJourneyDetailPresentation = section === 'journeys' && screen === 'detail'");
     expect(homeSource).toContain('new Animated.Value(0)');
-    expect(homeSource).toContain('styles.journeyWatercolourLayer');
-    expect(homeSource).toContain('styles.journeyWatercolourPrimary');
-    expect(homeSource).toContain('styles.journeyWatercolourSecondary');
-    expect(homeSource).toContain('styles.journeyWatercolourTertiary');
-    expect(homeSource).toContain('journeyPaletteTheme.primaryColor');
-    expect(homeSource).toContain('journeyPaletteTheme.secondaryColor');
-    expect(homeSource).toContain('journeyPaletteTheme.tertiaryColor');
-    expect(homeSource).not.toContain('journeyAtmosphereOpacity');
+    expect(homeSource).toContain("import { LinearGradient } from 'expo-linear-gradient'");
+    expect(homeSource).toContain('colors={journeyPaletteTheme.gradientColors}');
+    expect(homeSource).toContain('locations={[0, 0.28, 0.52, 0.74, 1]}');
+    expect(homeSource).toContain('styles.journeyWatercolourGradient');
+    expect(homeSource).not.toContain('journeyWatercolourWash');
     expect(homeSource).toContain('backgroundColor: localAccent');
   });
 

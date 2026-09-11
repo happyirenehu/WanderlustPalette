@@ -6,6 +6,7 @@ describe('Journey palette atmosphere', () => {
       backgroundColor: '#EFF1EF',
       borderColor: '#F8E9D0',
       foregroundColor: '#000000',
+      gradientColors: ['#F4F0E8', '#F2F0EA', '#F1E5CF', '#EDE7D9', '#E7EFF5'],
       primaryColor: '#DCEEFF',
       primaryForegroundColor: '#000000',
       secondaryColor: '#E6B86A',
@@ -54,5 +55,13 @@ describe('Journey palette atmosphere', () => {
     const palette = ['#334455', '#AA7744'];
     expect(getJourneyPaletteTheme(palette).foregroundColor)
       .toBe(getJourneyPaletteTheme(palette).foregroundColor);
+  });
+
+  test('derives a deterministic light-to-deep watercolour gradient', () => {
+    const palette = ['#101828', '#684C78'];
+    const theme = getJourneyPaletteTheme(palette);
+
+    expect(theme.gradientColors).toEqual(['#F4F0E8', '#E2DFD9', '#D8CFD2', '#B0ABAF', '#74777C']);
+    expect(theme.gradientColors).toEqual(getJourneyPaletteTheme(palette).gradientColors);
   });
 });
