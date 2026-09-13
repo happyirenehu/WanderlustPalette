@@ -16,6 +16,7 @@ As users save Dreams and add Journey memories, the app gradually builds a person
 - Filter suggestions by travel budget
 - Explore destination details and related places
 - Save destinations to a Dream Palette
+- Users can quickly add or remove destinations from Discover using the accessible heart control, and remove saved destinations directly from Dream Palette without opening Destination Detail.
 - Add, edit and delete Journeys
 - Record Journey expenses and view calculated insights
 - Take a photo or choose one from the photo library
@@ -83,6 +84,7 @@ These versions come from the project manifest:
 | Expo FileSystem | `~19.0.24` |
 | Expo ImageManipulator | `~14.0.8` |
 | Expo GL | `~16.0.10` |
+| Expo Linear Gradient | `~15.0.8` |
 | React Native Safe Area Context | `~5.6.0` |
 
 ## Requirements
@@ -91,7 +93,7 @@ These versions come from the project manifest:
 - A development environment that can run an Expo SDK 54 project.
 - A compatible physical device or native simulator/emulator environment for checking Camera and Photo → Colour behaviour.
 
-This project was developed and validated with Expo SDK 54. A newer Expo Go client may not support that SDK version, so the marker should use the separately documented compatible run or deployment route.
+This project was developed and validated with Expo SDK 54. A newer Expo Go client may not directly support this SDK 54 project; use one of the compatible routes below.
 
 ## Installation
 
@@ -131,7 +133,66 @@ npm run android
 npm run web
 ```
 
-The validated coursework codebase targets Expo SDK 54. A final marker-runnable deployment route will be documented separately once it has been established and tested. This repository does not currently claim a public Expo URL, EAS project or store deployment.
+## Ways to Run Wanderlust Palette
+
+The validated coursework codebase uses Expo SDK 54. A newer Expo Go client may not directly support this SDK 54 project.
+
+### OPTION 1 — Expo
+
+Use the submitted Expo project or link where an SDK-54-compatible Expo client is available.
+
+### OPTION 2 — Android standalone build
+
+If an EAS Preview APK is supplied with the submission, it can be installed on an Android device or Android emulator without relying on Expo Go.
+
+### OPTION 3 — iOS Simulator build
+
+If an EAS iOS Simulator build is supplied, it can be installed in the iOS Simulator on macOS.
+
+### OPTION 4 — Run from source
+
+For the Git repository, install the locked dependencies with:
+
+```bash
+npm ci
+```
+
+For the coursework ZIP, where `package-lock.json` is intentionally excluded, install the declared dependencies with:
+
+```bash
+npm install
+```
+
+Then start the application with:
+
+```bash
+npm start
+```
+
+The `npm run ios` and `npm run android` commands above remain available for launching a specific platform.
+
+## Coursework ZIP Checklist
+
+Include:
+
+- application source code;
+- assets;
+- `README.md`;
+- `package.json`; and
+- required project configuration files.
+
+Exclude:
+
+- `node_modules/`;
+- `package-lock.json`;
+- `coverage/`;
+- `.expo/`;
+- generated build output;
+- temporary files;
+- unrelated prototype files; and
+- experimental audio/Sound prototype files.
+
+`package-lock.json` remains tracked in Git. It is excluded only from the coursework submission ZIP because the coursework instructions explicitly require this.
 
 ## Camera and Photo Permissions
 
@@ -167,8 +228,12 @@ The project does not claim encryption, cloud synchronization or a privacy policy
 
 At the validated production checkpoint:
 
-- **30/30 Jest test suites passed**
-- **249/249 executed tests passed**
+- **31/31 Jest test suites passed**
+- **262/262 tests passed**
+- **0 failures**
+- **Jest coverage:** Statements 94.39%, Branches 83.53%, Functions 97.63%, Lines 96.37%
+- **Expo Doctor:** 18/18 checks passed
+- **`git diff --check`:** passed
 
 ### Automated Testing
 
@@ -248,4 +313,6 @@ I kept calculations, validation and persistence work in testable utility modules
 
 This is a React Native and Expo mobile-development coursework project.
 
-Validated production checkpoint: `v1.0-accessibility-validated`
+Validated production checkpoint:
+v1.2.6-quick-dream
+741d9df0a303aa6c3203ba30901010110083abb9
