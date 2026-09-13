@@ -1,318 +1,218 @@
 # Wanderlust Palette
 
-## Project Overview
+## About the Project
 
-I built Wanderlust Palette as a React Native and Expo coursework project that connects travel planning with colour, feeling and memory. The app lets users begin with a mood or colour, discover matching destinations, save places they dream about, and later record those places as personal Journeys.
+I built Wanderlust Palette as my React Native and Expo coursework project.
 
-The main experience follows this path:
+The idea came from how I remember travelling through colours and feelings, not only through places. I wanted to make an app where someone could start with how they feel, discover a destination, save somewhere they dream about visiting, and later turn their own travel photo into a personal colour memory.
 
-**Feel → Vibe → Colour → Destination Discovery → Dream Palette → Travel → Personal Palette → Remember**
+The main path through the app is:
 
-As users save Dreams and add Journey memories, the app gradually builds a personal Colour Passport that reflects both where they hope to go and where they have been.
+**Feel → Vibe → Colour → Discover → Dream → Travel → Personal Palette → Remember**
 
-## Key Features
+## Main Features
 
-- Discover destinations by vibe or colour
-- Filter suggestions by travel budget
-- Explore destination details and related places
-- Save destinations to a Dream Palette
-- Users can quickly add or remove destinations from Discover using the accessible heart control, and remove saved destinations directly from Dream Palette without opening Destination Detail.
-- Add, edit and delete Journeys
-- Record Journey expenses and view calculated insights
+- Discover destinations by vibe, colour and budget
+- View destination details and related places
+- Save and remove destinations from Dream Palette
+- Quickly add or remove a Dream from Discover with an accessible heart control
+- Add, edit and delete personal Journeys
+- Record travel expenses and view simple insights
 - Take a photo or choose one from the photo library
-- Extract colours from a photo and edit the suggested Journey palette
-- Link saved Dreams to Journey memories
-- Receive recommendations shaped by recent choices, Dreams and Journeys
-- View a personal Colour Passport with a programmed watercolour animation
-- Load optional country information from the World Bank API
-- Switch between English and Traditional Chinese (`zh-Hant`)
-- Navigate with responsive top and bottom section controls
-- Use screen-reader labels, selected states, status feedback and dynamic contrast
+- Extract three suggested colours from a Journey photo
+- Edit and save personal Journey palettes
+- Get recommendations from recent choices, Dreams and Journeys
+- View a personal Colour Passport with a watercolour animation
+- Use English or Traditional Chinese (`zh-Hant`)
+- View optional World Bank country information
+- Use accessibility labels, selected states and dynamic text contrast
 
-## Technical Highlights
+## Technology
 
-### Camera → Photo → Colour
+- Expo SDK 54
+- React Native 0.81.5
+- React 19.1.0
+- JavaScript
+- AsyncStorage
+- Expo ImagePicker
+- Expo FileSystem
+- Expo ImageManipulator
+- Expo GL
+- Expo Linear Gradient
+- Jest
 
-When adding or replacing a Journey photo, the user can choose **Take Photo** or **Choose from Library**. Both options feed into the same processing flow:
+## Install the Project
 
-1. Expo ImagePicker requests the relevant permission and returns the selected image.
-2. The picker result is normalized and checked before it is used.
-3. The image is copied into an app-owned Journey photo directory with Expo FileSystem.
-4. Expo ImageManipulator produces a small analysis image, limited to 64 × 64 pixels.
-5. Expo GL/WebGL renders that image and provides RGBA pixel readback.
-6. Project code groups the pixel colours into 4,096 histogram buckets, ranks the dominant groups and selects three colours that are sufficiently distinct.
-7. The three suggestions are shown in the Journey form, where the user can accept or edit them before saving.
+### Submitted coursework ZIP
 
-To keep photo replacement safe, the new photo is copied and staged before the updated Journey is persisted. An old app-owned photo is deleted only after the replacement has been saved successfully.
+The submitted ZIP does not contain `package-lock.json`.
 
-Expo GL/WebGL provides the graphics context and pixel-readback functionality. The project-specific work around it includes bounded image preparation, validation, quantization, histogram counting, distinct-colour selection, cleanup and integration with Journey persistence.
+After extracting the ZIP, open Terminal in the project folder and run:
 
-### Adaptive Recommendations
+```bash
+npm install
+```
 
-The recommendation system does not use machine learning. Instead, it builds a preference profile from recent vibe choices, saved Dreams, Journeys and Journey colours.
+### Git repository
 
-Each type of evidence has an explicit weight. Recent vibe choices favour newer selections, Dream destinations contribute their curated vibes and colours, and Journeys contribute both linked destination data and colours from their editable palettes. Destinations are then scored deterministically. Equal scores stay in catalogue order, so the same input always produces the same result. The app also explains the strongest reasons behind each personalized suggestion.
-
-If the user has not created any personal evidence yet, the catalogue provides a consistent neutral starting point.
-
-### Colour Passport
-
-The Colour Passport is a personal visual summary created from the user's saved travel evidence. It combines the strongest Dream colour, colours gathered from Journey memories, recurring vibe evidence and a representative Journey palette.
-
-It is derived from current Dream and Journey data rather than stored as a separate record. When the Passport section is entered, up to five palette-aware watercolour shapes use React Native's built-in `Animated` API to move from offset positions and fade into their final composition. The animation runs once on entry, uses the native driver and does not change the underlying Passport data.
-
-### World Bank API
-
-Destination details can include optional country information from the World Bank's public, read-only country API. Before making a request, the app checks that it has a valid two-letter country code. It also validates the response and ignores malformed or mismatched records.
-
-To keep this feature reliable, requests use an `AbortController` with a five-second timeout. Successful results are cached locally for 30 days. If cached information is available, it can be shown while older data is refreshed. If the network request fails and there is no cached record, the main destination detail still works without the additional country facts. The API does not require authentication.
-
-## Technology Stack
-
-These versions come from the project manifest:
-
-| Technology | Version |
-|---|---:|
-| Expo | `~54.0.36` |
-| React Native | `0.81.5` |
-| React | `19.1.0` |
-| JavaScript | ECMAScript modules with JSX |
-| Jest | `~29.7.0` |
-| jest-expo | `~54.0.18` |
-| AsyncStorage | `2.2.0` |
-| Expo ImagePicker | `~17.0.11` |
-| Expo FileSystem | `~19.0.24` |
-| Expo ImageManipulator | `~14.0.8` |
-| Expo GL | `~16.0.10` |
-| Expo Linear Gradient | `~15.0.8` |
-| React Native Safe Area Context | `~5.6.0` |
-
-## Requirements
-
-- Node.js and npm. The repository does not pin a Node version, so use a Node release supported by Expo SDK 54.
-- A development environment that can run an Expo SDK 54 project.
-- A compatible physical device or native simulator/emulator environment for checking Camera and Photo → Colour behaviour.
-
-This project was developed and validated with Expo SDK 54. A newer Expo Go client may not directly support this SDK 54 project; use one of the compatible routes below.
-
-## Installation
-
-### From the development Git repository
-
-The Git repository contains `package-lock.json`. After cloning the repository, install the locked dependency versions with:
+The Git repository contains `package-lock.json`, so use the locked dependency versions:
 
 ```bash
 cd WanderlustPalette
 npm ci
 ```
 
-The lockfile remains part of the development repository and is not deleted or changed for submission.
+## Run the App
 
-### From the submitted coursework ZIP
-
-The coursework ZIP intentionally excludes `package-lock.json` to follow the submission requirements. After extracting that ZIP, install the declared dependencies with:
+Start the Expo development server with:
 
 ```bash
-cd WanderlustPalette
-npm install
+npm start
 ```
 
-This exclusion applies only to the submitted ZIP. A marker running the ZIP should use `npm install`, while development from Git should use `npm ci`.
-
-## Running the Application
-
-The scripts in `package.json` provide these commands:
+These scripts are also available:
 
 ```bash
-# Start the Expo development server
-npm start
-
-# Ask Expo to launch a specific platform
 npm run ios
 npm run android
 npm run web
 ```
 
+This project uses Expo SDK 54. A newer Expo Go client may not directly support it, so use an SDK-54-compatible client or one of the options below.
+
 ## Ways to Run Wanderlust Palette
 
-The validated coursework codebase uses Expo SDK 54. A newer Expo Go client may not directly support this SDK 54 project.
+### Option 1 — Expo
 
-### OPTION 1 — Expo
+Use the submitted Expo project or link with an SDK-54-compatible Expo client.
 
-Use the submitted Expo project or link where an SDK-54-compatible Expo client is available.
+### Option 2 — Android Preview APK
 
-### OPTION 2 — Android standalone build
+I successfully created an Android Preview APK using EAS with the `preview-apk` profile. The cloud build completed successfully, but I did not perform a separate Android runtime test because I did not have an Android device available.
 
-An Android Preview APK was successfully built with the `preview-apk` profile. It can be installed on a compatible Android device without relying on Expo Go. [View the Android build](https://expo.dev/accounts/happyirenehu/projects/WanderlustPalette/builds/215a4e57-0314-4c8a-be9e-3fe22e4814b8).
+[View the Android build](https://expo.dev/accounts/happyirenehu/projects/WanderlustPalette/builds/215a4e57-0314-4c8a-be9e-3fe22e4814b8)
 
-### OPTION 3 — iOS Simulator build
+### Option 3 — iOS Simulator build
 
-An iOS Simulator EAS build finished successfully with the `ios-simulator` profile on Expo SDK 54.0.0, from commit `dbc119014e221fa512683d1ef7e0070f1b3d5220`. It can be installed in the iOS Simulator on macOS: [build page](https://expo.dev/accounts/happyirenehu/projects/WanderlustPalette/builds/bf1c83b2-9c08-49b6-b1e1-ee72f237c697) · [application archive](https://expo.dev/artifacts/eas/CJh0avq8ibaxCMN7QAPwzffue1MUCZF8kPAiwpr1EM8.tar.gz). It was not launched locally because Xcode is not installed on the development Mac.
+I successfully created an iOS Simulator build using EAS with the `ios-simulator` profile on Expo SDK 54.0.0. The cloud build completed successfully, but I did not launch it locally because Xcode is not installed on my development Mac. It was built from commit `dbc119014e221fa512683d1ef7e0070f1b3d5220`.
 
-### OPTION 4 — Run from source
+[View the iOS build](https://expo.dev/accounts/happyirenehu/projects/WanderlustPalette/builds/bf1c83b2-9c08-49b6-b1e1-ee72f237c697)
 
-For the Git repository, install the locked dependencies with:
+[Download the iOS Simulator archive](https://expo.dev/artifacts/eas/CJh0avq8ibaxCMN7QAPwzffue1MUCZF8kPAiwpr1EM8.tar.gz)
 
-```bash
-npm ci
-```
+### Option 4 — Run from source
 
-For the coursework ZIP, where `package-lock.json` is intentionally excluded, install the declared dependencies with:
-
-```bash
-npm install
-```
-
-Then start the application with:
+Use `npm ci` from the Git repository or `npm install` from the coursework ZIP, then run:
 
 ```bash
 npm start
 ```
 
-The `npm run ios` and `npm run android` commands above remain available for launching a specific platform.
+## Camera and Photo Colours
 
-## Coursework ZIP Checklist
+When adding or replacing a Journey photo, the app offers **Choose from Library**, **Take Photo** and **Cancel**.
 
-Include:
+- Camera permission is requested only after choosing **Take Photo**.
+- Media-library permission is requested only after choosing **Choose from Library**.
+- Cancelling does not change the form, photo or palette.
+- Both paths use the same photo preparation and colour-extraction flow.
+- The photo is copied into app-owned local storage before colour extraction.
+- The app suggests three colours, which the user can edit before saving.
 
-- application source code;
-- assets;
-- `README.md`;
-- `package.json`; and
-- required project configuration files.
-
-Exclude:
-
-- `node_modules/`;
-- `package-lock.json`;
-- `coverage/`;
-- `.expo/`;
-- generated build output;
-- temporary files;
-- unrelated prototype files; and
-- experimental audio/Sound prototype files.
-
-`package-lock.json` remains tracked in Git. It is excluded only from the coursework submission ZIP because the coursework instructions explicitly require this.
-
-## Camera and Photo Permissions
-
-The Add/Replace Photo action offers **Choose from Library**, **Take Photo** and **Cancel**.
-
-- Camera permission is requested only when **Take Photo** is chosen.
-- Media-library permission is requested for **Choose from Library**.
-- If permission is denied, the app shows specific feedback without changing the current form, photo or palette.
-- Cancelling either native picker makes no state change and shows no error.
-- A successful image is normalized and copied to app-owned local storage before colour extraction begins.
-- Camera and library photos use the same preparation, extraction, editing and Journey-save flow.
-
-The app's photo workflow does not request microphone permission.
+The photo workflow does not request microphone permission.
 
 ## Data and Network Behaviour
 
-The app stores the following information locally on the device:
+I store Journeys, expenses, Dream IDs, language choice, recent vibe choices, cached country facts and owned Journey photos locally on the device.
 
-- Journeys and their expense entries;
-- saved Dream destination identifiers;
-- the chosen language;
-- recent vibe selections used by the recommendation system;
-- cached World Bank country facts; and
-- app-owned copies of personal Journey photos.
+The app calculates recommendations, Dream-to-Memory links and the Colour Passport from that saved data instead of storing duplicate copies.
 
-The preference profile, recommendations, Dream → Memory state and Colour Passport are calculated from this local evidence when needed rather than stored as separate copies. Personal Journey photos are read locally for colour extraction; the project does not contain a photo-upload or analytics workflow.
+Country information comes from the public World Bank API when available. If there is no network connection or no cached country record, the main destination screen still works without the extra facts.
 
-World Bank enrichment needs a network connection when no cached record is available. Storage and network failures produce controlled fallback states or localized feedback, so they do not block the main discovery and Journey features.
-
-The project does not claim encryption, cloud synchronization or a privacy policy.
+The project does not include photo uploads, cloud sync, analytics, encryption claims or a privacy policy.
 
 ## Testing
 
 At the validated production checkpoint:
 
-- **31/31 Jest test suites passed**
-- **262/262 tests passed**
-- **0 failures**
-- **Jest coverage:** Statements 94.39%, Branches 83.53%, Functions 97.63%, Lines 96.37%
-- **Expo Doctor:** 18/18 checks passed
-- **`git diff --check`:** passed
+- 31/31 Jest test suites passed
+- 262/262 tests passed
+- 0 failures
+- Coverage: Statements 94.39%, Branches 83.53%, Functions 97.63%, Lines 96.37%
+- Expo Doctor: 18/18 checks passed
+- `git diff --check`: passed
 
-### Automated Testing
+The Jest tests cover the parts that can be checked reliably in JavaScript, including storage, Journey and expense logic, Dreams, discovery, recommendations, localization, World Bank response handling, photo-picker normalization, photo-colour processing, palette behaviour and navigation helpers.
 
-The automated tests focus on the parts of the app that can be tested reliably in Jest. They cover:
+Jest does not test physical Camera hardware, real native GL rendering or VoiceOver itself.
 
-- Journey, expense and Dream transformations and persistence;
-- malformed storage data and storage failure paths;
-- destination normalization, vibe/colour discovery, budget filtering and related destinations;
-- deterministic preference profiles and adaptive recommendation integration;
-- World Bank response parsing, timeout/failure behaviour and cache freshness;
-- localization lookup, fallback and localized catalogue presentation;
-- picker-result normalization, including a Camera-shaped result;
-- app-owned Journey photo naming, copying, ownership checks and cleanup;
-- photo-colour quantization, histogram selection and invalid RGBA inputs;
-- Journey palette integration and manual-edit precedence;
-- Dream → Memory linkage and Colour Passport derivation;
-- Passport artwork palette construction; and
-- hybrid-navigation visibility and contrast calculations.
+## Physical Testing
 
-Jest does not test native Camera hardware, native GL rendering or VoiceOver itself.
+I tested the main native features on a physical iPhone, including:
 
-### Physical Device Testing
-
-Native features were also checked on a physical iPhone. This testing covered:
-
-- Camera capture;
-- Photo → Colour;
-- Journey persistence;
-- photo replacement;
-- the Colour Passport animation; and
-- VoiceOver accessibility.
+- Camera capture and photo-library selection
+- Photo-to-Colour extraction
+- Saving, reopening and replacing Journey photos
+- Journey persistence
+- Colour Passport animation
+- VoiceOver accessibility
 
 ## Accessibility
 
-Accessibility was treated as part of the interaction design rather than added only at the end. Interactive controls use roles, labels and hints so their purpose is clear to a screen reader. Vibe, colour, language and navigation choices expose their selected state, while form inputs keep meaningful labels after their placeholders disappear.
+I treated accessibility as part of the app design. Interactive controls have roles, labels or hints where needed. Vibe, colour, language and navigation choices expose their selected state.
 
-The app also includes contextual labels for expense actions, larger non-visual hit areas for selected compact controls, and dynamically calculated foreground contrast on colour-driven backgrounds. Duplicate navigation and the hidden GL analysis surface are removed from the accessibility tree so they do not create extra VoiceOver stops.
+I also added contextual labels for compact actions, larger non-visual hit areas where needed, and calculated text contrast for colour-based backgrounds. The final accessibility changes were checked with VoiceOver on an iPhone.
 
-The final semantic changes were tested on an iPhone with VoiceOver. This is practical implementation and testing evidence, not a claim of formal WCAG certification.
+This is practical testing evidence, not a claim of formal WCAG certification.
+
+## Coursework ZIP Checklist
+
+Include:
+
+- application source code
+- assets
+- `README.md`
+- `package.json`
+- required project configuration files
+
+Exclude:
+
+- `node_modules/`
+- `package-lock.json`
+- `coverage/`
+- `.expo/`
+- generated build output
+- temporary files
+- unrelated prototype files
+- experimental audio/Sound prototype files
+
+`package-lock.json` stays tracked in Git. It is excluded only from the coursework ZIP because the coursework instructions require this.
 
 ## Project Structure
 
-```text
-WanderlustPalette/
-├── App.js                     Application provider and root screen
-├── screens/                   Main application and discovery/Passport UI
-├── components/                Destination, vibe and photo-analysis components
-├── utils/                     Deterministic domain, validation and integration logic
-│   ├── *Storage.js            AsyncStorage and owned-photo persistence modules
-│   ├── countryApi.js          World Bank request and response normalization
-│   ├── photoPicker.js         Native picker-result normalization
-│   └── photoColorExtractor.js Bounded RGBA colour extraction
-├── data/                      Curated destination, vibe and colour catalogues
-├── locales/                   English and Traditional Chinese resources
-├── tests/                     Jest unit, integration, persistence and regression tests
-└── assets/                    App artwork, icons and bundled Journey seed data
-```
-
-I kept calculations, validation and persistence work in testable utility modules where practical. The screens coordinate those modules with React state, platform APIs and user interactions.
+The project keeps screens, components, utilities, data, locales, tests and assets in separate folders. `App.js` is the entry point.
 
 ## Known Limitations
 
-- The project is designed primarily for portrait use.
-- It targets Expo SDK 54, which may not open in a newer incompatible Expo Go client.
-- There is no rendered end-to-end UI test harness. Camera hardware, GL rendering and VoiceOver behaviour therefore also require physical-device checks.
-- Live World Bank enrichment needs network access when no cached country record exists.
-- `HomeScreen.js` coordinates a relatively large amount of application state, although storage, validation, recommendation and extraction logic has been separated into utilities.
-- The repository does not currently claim an App Store, Play Store, EAS or public Expo deployment.
+- The app is designed mainly for portrait use.
+- A newer Expo Go client may not support Expo SDK 54 directly.
+- Camera hardware, native GL rendering and VoiceOver still need native-device checks outside Jest.
+- World Bank information needs a network connection when no cached result exists.
+- There is no rendered end-to-end UI test suite.
+- The iOS Simulator cloud build was not launched locally because Xcode is not installed.
+- The Android Preview APK cloud build completed successfully, but I did not have an Android device available for a separate runtime test.
+- I do not claim physical-iPhone EAS distribution, TestFlight, App Store or Play Store availability.
 
-## Attribution and Data Sources
+## Attribution
 
-- Country enrichment uses the public World Bank country API.
-- Destination and vibe photography is shown with Unsplash attribution and outbound credit links where configured.
-- Destination, vibe, colour and sample Journey catalogues are bundled project data used by the app.
+- Country information uses the public World Bank country API.
+- Destination and vibe images use Unsplash attribution and outbound credit links where configured.
+- Destination, vibe, colour and sample Journey data are bundled project data.
 
-## Coursework Note
-
-This is a React Native and Expo mobile-development coursework project.
+## Coursework Checkpoint
 
 Validated production checkpoint:
-v1.2.6-quick-dream
-741d9df0a303aa6c3203ba30901010110083abb9
+
+`v1.2.6-quick-dream`
+
+`741d9df0a303aa6c3203ba30901010110083abb9`
