@@ -143,11 +143,11 @@ Use the submitted Expo project or link where an SDK-54-compatible Expo client is
 
 ### OPTION 2 — Android standalone build
 
-If an EAS Preview APK is supplied with the submission, it can be installed on an Android device or Android emulator without relying on Expo Go.
+An Android Preview APK was successfully built with the `preview-apk` profile. It can be installed on a compatible Android device without relying on Expo Go. [View the Android build](https://expo.dev/accounts/happyirenehu/projects/WanderlustPalette/builds/215a4e57-0314-4c8a-be9e-3fe22e4814b8).
 
 ### OPTION 3 — iOS Simulator build
 
-If an EAS iOS Simulator build is supplied, it can be installed in the iOS Simulator on macOS.
+An iOS Simulator EAS build finished successfully with the `ios-simulator` profile on Expo SDK 54.0.0, from commit `dbc119014e221fa512683d1ef7e0070f1b3d5220`. It can be installed in the iOS Simulator on macOS: [build page](https://expo.dev/accounts/happyirenehu/projects/WanderlustPalette/builds/bf1c83b2-9c08-49b6-b1e1-ee72f237c697) · [application archive](https://expo.dev/artifacts/eas/CJh0avq8ibaxCMN7QAPwzffue1MUCZF8kPAiwpr1EM8.tar.gz). It was not launched locally because Xcode is not installed on the development Mac.
 
 ### OPTION 4 — Run from source
 
